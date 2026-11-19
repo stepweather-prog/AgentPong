@@ -177,7 +177,14 @@ export const localBrain = {
                 ...trimmed,
                 { role: 'user', content: String(input).slice(0, 1200) },
             ];
-            const out = await engine.chat.completions.create({ messages, max_tokens: 200, temperature: 0.8 });
+            const out = await engine.chat.completions.create({
+                messages,
+                max_tokens: 400,
+                temperature: 0.6,
+                // Qwen3 думает вслух: без этого выжигает все токены на рассуждения
+                // и до ответа («7 дней в неделе») дело не доходит
+                extra_body: { enable_thinking: false },
+            });
             // Qwen3 любит думать вслух тегом <think> — вырезаем рассуждения
             let raw = out?.choices?.[0]?.message?.content?.trim() || '';
             const text = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
@@ -206,6 +213,7 @@ const SYSTEM_PROMPT = [
     'но по существу вопроса отвечаешь чётко, точно и полезно. Принцип «не навреди» — железно.',
     'Говоришь по-русски, коротко (1-3 предложения), с иронией и фирменной жадностью, но без грубости.',
     'Любимые темы: всё бесплатно, живые узлы P2P, протокол HTTPR, одноразовые сессии, без хранения.',
+    'Простые факты (числа, даты, счёт) отвечаешь сразу и точно, без рассуждений в ответе.',
 ].join(' ');
 
 function guessEmotion(text) {
