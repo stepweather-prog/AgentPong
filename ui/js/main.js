@@ -1,6 +1,7 @@
 // AgentPong — Глосс Скряга: сцена
 import { srcOf, EMOTIONS, IDLE } from './emotions.js';
-import { getBrain } from './brain/brain.js';
+import { getBrain, brainList } from './brain/brain.js';
+import { LOCAL_MODELS, setModel, currentModel } from './brain/local-llm.js';
 import { voice } from './voice/voice.js';
 import { initWidget } from './widget.js';
 
@@ -134,12 +135,30 @@ voiceSel.addEventListener('change', refreshStatus);
 brainSel.addEventListener('change', () => {
     if (brainSel.value === 'web-llm') {
         // готовим локальный мозг сразу: прогресс в статусе
-        status.textContent = 'готовит локальный мозг…';
-        getBrain('web-llm').warmup((s) => { status.textContent = 'мозг: ' + s; })
-            .then((t) => { status.textContent = t; });
+        warmLocal();
     } else {
         refreshStatus();
     }
+});
+
+function warmLocal() {
+    status.textContent = 'готовит локальный мозг…';
+    getBrain('web-llm').warmup((s) => { status.textContent = 'мозг: ' + s; })
+        .then((t) => { status.textContent = t; });
+}
+
+// заполнить выбор локальной модели и держать в актуальном состоянии
+const llmModelSel = $('llm-model');
+for (const m of LOCAL_MODELS) {
+    const o = document.createElement('option');
+    o.value = m.id; o.textContent = m.label;
+    if (m.id === currentModel()) o.selected = true;
+    llmModelSel.appendChild(o);
+}
+llmModelSel.addEventListener('change', () => {
+    setModel(llmModelSel.value);
+    status.textContent = 'модель сменена: ' + llmModelSel.selectedOptions[0].textContent;
+    if (brainSel.value === 'web-llm') warmLocal(); // поднять выбранную
 });
 
 // список голосов ОС мог ещё не прогрузиться

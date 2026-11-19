@@ -1,8 +1,27 @@
-// AgentPong — мозг #2: ЛОКАЛЬНЫЙ. Модель живёт в кэше браузера/виджета,
-// гоняет на WebGPU. Ниже всего: ни ключей, ни VPN, ни облака.
-// Разовая загрузка весов (~350-900 МБ), потом полностью оффлайн.
+// AgentPong — мозг #2: ЛОКАЛЬНЫЙ под слабое железо.
+// Модель живёт в кэше браузера/виджета, гоняет на WebGPU.
+// Ни ключей, ни VPN, ни облака. Разовая закачка весов — потом оффлайн.
 
-const MODEL_ID = localStorage.getItem('ap.llm_model') || 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC';
+// от крохотной к умной (для слабого железа):
+export const LOCAL_MODELS = [
+    { id: 'SmolLM2-135M-Instruct-q0f16-MLC',    label: 'SmolLM 135M — кроха (~150 МБ)' },
+    { id: 'SmolLM2-360M-Instruct-q4f16_1-MLC',  label: 'SmolLM 360M — золотая середина (~300 МБ)' },
+    { id: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',  label: 'Qwen 0.5B — помощнее (~400 МБ)' },
+    { id: 'Llama-3.2-1B-Instruct-q4f16_1-MLC',  label: 'Llama 1B — потолок разумного (~700 МБ)' },
+];
+
+let modelId = (typeof localStorage !== 'undefined' && localStorage.getItem('ap.llm_model')) || LOCAL_MODELS[1].id;
+
+export function currentModel() { return modelId; }
+
+export function setModel(id) {
+    if (!LOCAL_MODELS.some(m => m.id === id)) return false;
+    if (id === modelId) return true;
+    modelId = id;
+    localStorage.setItem('ap.llm_model', id);
+    enginePromise = null;   // следующая сессия поднимет выбранную
+    return true;
+}
 
 let enginePromise = null;
 
@@ -17,8 +36,8 @@ async function getEngine(onStatus) {
     if (!enginePromise) {
         enginePromise = (async () => {
             const webllm = await import('/node_modules/@mlc-ai/web-llm/lib/index.js');
-            onStatus && onStatus('качаю модель (разово, терпение — потом оффлайн)…');
-            const engine = await webllm.CreateMLCEngine(MODEL_ID, {
+            onStatus && onStatus('качаю модель (разово, терпение)…');
+            const engine = await webllm.CreateMLCEngine(modelId, {
                 initProgressCallback: statusTo(onStatus),
             });
             return engine;
@@ -28,9 +47,7 @@ async function getEngine(onStatus) {
     return enginePromise;
 }
 
-const ROLE = {
-    system: 'system', user: 'user', agent: 'assistant',
-};
+const ROLE = { system: 'system', user: 'user', agent: 'assistant' };
 
 export const localBrain = {
     name: 'web-llm — локальный (без ключей)',
@@ -38,7 +55,7 @@ export const localBrain = {
     async warmup(onStatus) {
         try {
             await getEngine(onStatus);
-            return 'Локальный мозг готов: ' + MODEL_ID;
+            return 'Локальный мозг готов: ' + modelId;
         } catch (e) {
             return 'Локальный мозг не поднялся: ' + (e && e.message ? e.message : e);
         }
@@ -55,15 +72,14 @@ export const localBrain = {
                 })),
                 { role: 'user', content: input },
             ];
-            const out = await engine.chat.completions.create({ messages, max_tokens: 300, temperature: 0.8 });
+            const out = await engine.chat.completions.create({ messages, max_tokens: 200, temperature: 0.8 });
             const text = out?.choices?.[0]?.message?.content?.trim();
             if (!text) throw new Error('пустой ответ');
             return { text, emotion: guessEmotion(text) };
         } catch (e) {
             return {
-                text: 'Локальный мозг не завёлся: ' + (e && e.message ? e.message : e) + '. Говорит правила-скряга — надёжнее него всё равно никого.',
+                text: 'Локальный мозг не завёлся: ' + (e && e.message ? e.message : e) + '. Говорю по правилам — надёжнее них всё равно никого.',
                 emotion: 'doubt',
-                speak: true,
             };
         }
     },
