@@ -132,19 +132,33 @@ voiceSel.addEventListener('change', () => {
     refreshStatus();
 });
 voiceSel.addEventListener('change', refreshStatus);
+
+// мозг тоже запоминаем: без этого каждый старт снова rules — и модель «не работает»
+brainSel.value = localStorage.getItem('ap.brain') || 'rules';
 brainSel.addEventListener('change', () => {
+    localStorage.setItem('ap.brain', brainSel.value);
     if (brainSel.value === 'web-llm') {
-        // готовим локальный мозг сразу: прогресс в статусе
-        warmLocal();
+        warmLocal();   // готовим локальный мозг сразу: прогресс в статусе
     } else {
         refreshStatus();
     }
 });
 
+let warmNote = '';   // предупреждение от гварда модели — не теряется под статусом
+
 function warmLocal() {
-    status.textContent = 'готовит локальный мозг…';
-    getBrain('web-llm').warmup((s) => { status.textContent = 'мозг: ' + s; })
-        .then((t) => { status.textContent = t; });
+    const label = llmModelSel.selectedOptions[0]
+        ? llmModelSel.selectedOptions[0].textContent : currentModel();
+    status.textContent = 'мозг «' + label + '»: готовлюсь…';
+    getBrain('web-llm').warmup((s) => {
+        // в прогрессе web-llm уже слова + проценты — показываем как есть
+        status.textContent = 'мозг: ' + s;
+    }).then((t) => {
+        status.textContent = t + warmNote;
+        if (brainSel.value !== 'web-llm') {
+            status.textContent += ' (включи мозг «Локальный» — иначе она молчит)';
+        }
+    });
 }
 
 // заполнить выбор локальной модели и держать в актуальном состоянии
@@ -164,9 +178,9 @@ llmModelSel.addEventListener('change', () => {
         return;
     }
     setModel(llmModelSel.value);
-    status.textContent = 'модель сменена: ' + llmModelSel.selectedOptions[0].textContent
-        + (verdict.warn ? ' — ' + verdict.warn : '');
-    if (brainSel.value === 'web-llm') warmLocal(); // поднять выбранную
+    warmNote = verdict.warn ? ' — ' + verdict.warn : '';
+    // модель всегда готовим сразу — качаем в фоне с процентами в статусе
+    warmLocal();
 });
 
 // разведка железа для автоконтроля памяти (в виджете — честные цифры)
