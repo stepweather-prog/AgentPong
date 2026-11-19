@@ -1,9 +1,20 @@
-// AgentPong — мозг #2: бесплатная LLM через OpenRouter (free tier).
-// Ключ вводится в настройках (⚙), живёт в localStorage, в репо не попадает.
-// Бесплатный ключ: openrouter.ai → регистрация → Keys → Create Key.
+// AgentPong — мозг #3: облако через любой OpenAI-совместимый API.
+// По умолчанию — Grok (xAI, https://api.x.ai). Ключ живёт в localStorage, в репо не попадает.
+// Бесплатный путь Grok: console.x.ai → Billing → Credits → opt-in на шаринг данных
+// (запросы уходят xAI — решай сам, это плата приватностью, не деньгами).
 
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const FREE_MODEL = (typeof localStorage !== 'undefined' && localStorage.getItem('ap.model')) || 'meta-llama/llama-3.2-3b-instruct:free';
+const PROVIDERS = {
+    grok: {
+        url: 'https://api.x.ai/v1/chat/completions',
+        model: 'grok-3-mini',
+        hint: 'Grok (xAI)',
+    },
+    openrouter: {
+        url: 'https://openrouter.ai/api/v1/chat/completions',
+        model: 'meta-llama/llama-3.2-3b-instruct:free',
+        hint: 'OpenRouter (через VPN для РФ)',
+    },
+};
 
 const PERSONA = [
     'Ты — Глосс Скряга, виртуальный агент-навигатор проекта AgentPong.',
@@ -14,45 +25,77 @@ const PERSONA = [
     'Любимые темы: всё бесплатно, живые узлы P2P, протокол HTTPR, одноразовые сессии, без хранения.',
 ].join(' ');
 
+function cfg() {
+    let provider = 'grok';
+    if (typeof localStorage !== 'undefined') provider = localStorage.getItem('ap.cloud_provider') || 'grok';
+    const known = PROVIDERS[provider];
+    let url = known ? known.url : (localStorage.getItem('ap.cloud_url') || '');
+    let model = known ? known.model : 'gpt-3.5-turbo';
+    const modelOverride = typeof localStorage !== 'undefined' ? localStorage.getItem('ap.cloud_model') : null;
+    if (modelOverride) model = modelOverride;
+    // свой URL: с хвостом /chat/completions удобнее, чем гадать
+    if (url && !/\/chat\/completions$/.test(url)) url = url.replace(/\/+$/, '') + '/chat/completions';
+    return { url, model, provider };
+}
+
+export function cloudStatusText() {
+    const { provider, model } = cfg();
+    const p = PROVIDERS[provider];
+    return (p ? p.hint : 'свой URL') + ' / ' + model;
+}
+
 export const llmBrain = {
-    name: 'llm-api',
+    name: 'llm-api — облако (OpenAI-совместимое)',
 
     async respond(input, history = []) {
-        const key = localStorage.getItem('ap.openrouter_key');
+        const key = typeof localStorage !== 'undefined'
+            ? (localStorage.getItem('ap.cloud_key') || localStorage.getItem('ap.openrouter_key'))
+            : null;
         if (!key) {
             return {
-                text: 'Мозг-облако без ключа — как сейф без стенки. Впиши OpenRouter ключ в настройках (⚙), регистрация бесплатная. А пока правила-скряга.',
+                text: 'Мозг-облако без ключа — как сейф без стенки. Впиши ключ в настройках (⚙). У Грока халява через opt-in в console.x.ai, но он берёт платы данными. А пока правила-скряга.',
                 emotion: 'shrug',
             };
         }
+        const { url, model } = cfg();
         try {
             const messages = [
                 { role: 'system', content: PERSONA },
                 ...history.slice(-8).map(h => ({
                     role: h.who === 'user' ? 'user' : 'assistant',
-                    content: h.text,
+                    content: String(h.text || '').slice(0, 600),
                 })),
-                { role: 'user', content: input },
+                { role: 'user', content: String(input).slice(0, 1200) },
             ];
-            const resp = await fetch(OPENROUTER_URL, {
+            const resp = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Authorization': 'Bearer ' + key,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ model: FREE_MODEL, messages }),
+                body: JSON.stringify({
+                    model,
+                    messages,
+                    max_tokens: 300,
+                    temperature: 0.6,
+                }),
             });
-            if (resp.status === 401) {
-                localStorage.removeItem('ap.openrouter_key');
-                return { text: 'Ключ Open Router отвергнут — стёр его. Возьми свежий в настройках.', emotion: 'stern' };
+            if (resp.status === 401 || resp.status === 403) {
+                if (typeof localStorage !== 'undefined') localStorage.removeItem('ap.cloud_key');
+                return { text: 'Ключ отвергнут — стёр его. Возьми свежий в настройках.', emotion: 'stern' };
             }
             if (resp.status === 429) {
-                return { text: 'Дневная халява израсходована. Приходи завтра — бесплатность не любит спешки.', emotion: 'waiting' };
+                return { text: 'Бесплатная норма на сегодня выбита. Приходи завтра — халява не любит спешки.', emotion: 'waiting' };
             }
             if (!resp.ok) throw new Error('HTTP ' + resp.status);
             const data = await resp.json();
-            const text = data?.choices?.[0]?.message?.content?.trim();
+            let raw = data?.choices?.[0]?.message?.content?.trim() || '';
+            const text = raw.replace(/&lt;think&gt;[\s\S]*?&lt;\/think&gt;/gi, '').replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
             if (!text) throw new Error('пустой ответ');
+            const norm = (s) => String(s).replace(/[\s.!?,,]+/g, '').toLowerCase();
+            if (norm(text) === norm(input)) {
+                return { text: 'Эхо из облака — оно там тоже бесплатное. Переформулируй.', emotion: 'doubt' };
+            }
             return { text, emotion: guessEmotion(text) };
         } catch (e) {
             return {
@@ -70,4 +113,26 @@ function guessEmotion(text) {
     if (/(шутк|ха|смешно)/.test(t)) return 'laugh';
     if (/(погоди|сейчас|минут)/.test(t)) return 'waiting';
     return 'neutral';
+}
+
+// тест ключа из настроек: короткий пинг
+export async function pingCloud() {
+    const key = localStorage.getItem('ap.cloud_key');
+    if (!key) return 'ключ не введён';
+    const { url, model } = cfg();
+    try {
+        const resp = await fetch(url, {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model, messages: [{ role: 'user', content: '1+1=?' }], max_tokens: 30 }),
+        });
+        if (resp.status === 401 || resp.status === 403) return 'ключ отвергнут (' + resp.status + ')';
+        if (resp.status === 429) return 'ключ жив, лимит исчерпан (429)';
+        if (!resp.ok) return 'сервер ответил ' + resp.status;
+        const data = await resp.json();
+        const t = data?.choices?.[0]?.message?.content?.trim();
+        return t ? 'живой: ' + t.slice(0, 60) : 'живой, но ответ пустой';
+    } catch (e) {
+        return 'не достучался: ' + (e && e.message ? e.message : e) + ' (для РФ — VPN)';
+    }
 }

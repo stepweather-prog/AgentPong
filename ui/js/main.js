@@ -1,6 +1,7 @@
 // AgentPong — Глосс Скряга: сцена
 import { srcOf, EMOTIONS, IDLE } from './emotions.js';
 import { getBrain, brainList } from './brain/brain.js';
+import { cloudStatusText, pingCloud } from './brain/llm-api.js';
 import { LOCAL_MODELS, setModel, currentModel, checkModel, hwBudgetMB, initModels, f16State } from './brain/local-llm.js';
 import { voice } from './voice/voice.js';
 import { initWidget } from './widget.js';
@@ -127,13 +128,59 @@ async function refreshStatus() {
     });
 }
 
-// ключ OpenRouter — вводится в настройках, хранится только локально
-$('or-save').addEventListener('click', () => {
-    const k = $('or-key').value.trim();
-    if (!k) { status.textContent = 'поле пустое — ключ не сохранён'; return; }
-    localStorage.setItem('ap.openrouter_key', k);
-    $('or-key').value = '';
-    status.textContent = 'ключ OpenRouter сохранён (только в этом браузере)';
+// ---- облако: провайдер + ключ (Grok / OpenRouter / свой URL) ----
+const cloudProvider = $('cloud-provider'), cloudUrl = $('cloud-url'),
+    cloudModel = $('cloud-model'), cloudKey = $('cloud-key'), cloudStatus = $('cloud-status');
+
+function refreshCloudUI() {
+    const on = brainSel.value === 'llm-api';
+    $('cloud-row').hidden = !on;
+    const prov = localStorage.getItem('ap.cloud_provider') || 'grok';
+    const custom = prov === 'custom';
+    $('cloud-url-row').hidden = !on || !custom;
+    $('cloud-model-row').hidden = !on;
+    $('cloud-key-row').hidden = !on;
+    $('cloud-status').hidden = !on;
+    if (on && !cloudStatus.textContent) cloudStatus.textContent = 'мозг облако: ' + cloudStatusText();
+}
+
+// выбор провайдера: дефолтные модель/URL сразу в поля — видно, что будет использовано
+cloudProvider.addEventListener('change', () => {
+    localStorage.setItem('ap.cloud_provider', cloudProvider.value);
+    localStorage.removeItem('ap.cloud_model');       // сброс перекрытия на дефолт провайдера
+    cloudStatus.textContent = 'поставщик: ' + cloudStatusText();
+    refreshCloudUI();
+});
+
+// модель можно перекрыть своей строкой
+cloudModel.addEventListener('change', () => {
+    const m = cloudModel.value.trim();
+    if (m) localStorage.setItem('ap.cloud_model', m);
+    else localStorage.removeItem('ap.cloud_model');
+    cloudStatus.textContent = 'модель: ' + (m || 'по умолчанию поставщика');
+});
+
+// свой URL (только для «Свой URL»)
+cloudUrl.addEventListener('change', () => {
+    const u = cloudUrl.value.trim();
+    if (u) localStorage.setItem('ap.cloud_url', u);
+    else localStorage.removeItem('ap.cloud_url');
+    cloudStatus.textContent = 'URL сохранён';
+});
+
+// ключ — только в localStorage, в репо не попадает
+$('cloud-save').addEventListener('click', () => {
+    const k = cloudKey.value.trim();
+    if (!k) { cloudStatus.textContent = 'поле пустое — ключ не сохранён'; return; }
+    localStorage.setItem('ap.cloud_key', k);
+    cloudKey.value = '';
+    cloudStatus.textContent = 'ключ сохранён (только на этой машине)';
+});
+
+// проверка ключа живым запросом
+$('cloud-ping').addEventListener('click', async () => {
+    cloudStatus.textContent = 'стучусь в облако…';
+    cloudStatus.textContent = await pingCloud();
 });
 
 // выбор голоса/мозга запоминаем; в виджете — системный голос по умолчанию
@@ -157,8 +204,15 @@ $('voice-test').addEventListener('click', async () => {
 
 // мозг тоже запоминаем: без этого каждый старт снова rules — и модель «не работает»
 brainSel.value = localStorage.getItem('ap.brain') || 'rules';
+cloudProvider.value = localStorage.getItem('ap.cloud_provider') || 'grok';
+const savedCloudModel = localStorage.getItem('ap.cloud_model');
+if (savedCloudModel) cloudModel.value = savedCloudModel;
+const savedCloudUrl = localStorage.getItem('ap.cloud_url');
+if (savedCloudUrl) cloudUrl.value = savedCloudUrl;
+refreshCloudUI();
 brainSel.addEventListener('change', () => {
     localStorage.setItem('ap.brain', brainSel.value);
+    refreshCloudUI();
     if (brainSel.value === 'web-llm') {
         warmLocal();   // готовим локальный мозг сразу: прогресс в статусе
     } else {

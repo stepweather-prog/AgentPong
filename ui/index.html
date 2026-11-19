@@ -43,7 +43,7 @@
                     <select id="brain-engine">
                         <option value="rules">Оффлайн-скряга (правила)</option>
                         <option value="web-llm">Локальный мозг (без ключей, разовая закачка)</option>
-                        <option value="llm-api">OpenRouter (через VPN)</option>
+                        <option value="llm-api">Облако (Grok / OpenRouter / свой URL)</option>
                     </select>
                 </label>
                 <label class="key-row" id="win-voices-row" hidden>Голос Windows (SAPI):
@@ -57,10 +57,25 @@
                 <span id="hw-line" class="hint" hidden></span>
                 <button id="rhvoice" title="открыть страницу релизов RHVoice"
                         class="rhvoice-hint" hidden>RHVoice не найден — скачать живые бесплатные голоса ↗</button>
-                <label class="key-row">OpenRouter ключ:
-                    <input id="or-key" type="password" placeholder="sk-or-…">
-                    <button id="or-save" title="сохранить ключ">✓</button>
+                <label class="key-row" id="cloud-row" hidden>Поставщик облака:
+                    <select id="cloud-provider">
+                        <option value="grok">Grok (xAI)</option>
+                        <option value="openrouter">OpenRouter</option>
+                        <option value="custom">Свой URL</option>
+                    </select>
                 </label>
+                <label class="key-row" id="cloud-url-row" hidden>URL:
+                    <input id="cloud-url" type="text" placeholder="https://…/v1">
+                </label>
+                <label class="key-row" id="cloud-model-row" hidden>Модель:
+                    <input id="cloud-model" type="text" placeholder="grok-3-mini">
+                </label>
+                <label class="key-row" id="cloud-key-row" hidden>Ключ облака:
+                    <input id="cloud-key" type="password" placeholder="xai-… / sk-or-…">
+                    <button id="cloud-save" title="сохранить ключ">✓</button>
+                    <button id="cloud-ping" title="проверить ключ">⚡</button>
+                </label>
+                <span id="cloud-status" class="hint" hidden></span>
                 <span id="engine-status"></span>
             </div>
         </div>
