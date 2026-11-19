@@ -1,26 +1,20 @@
 // AgentPong — голосовые трамвайные пути.
-// piper      — @mintplex-labs/piper-tts-web (ONNX WASM, модель качается разово, кэш браузера)
-// webspeech  — встроенный синтез браузера (0 МБ, голоса ОС)
+// piper      — @mintplex-labs/piper-tts-web (ONNX WASM; модель качается разово в OPFS)
+// webspeech  — встроенный синтез браузера (0 МБ; в Electron голосов ОС нет)
 // off        — тихий
 
-let piper = null;          // лениво созданный PiperTTS
-let piperLoading = null;
-
 const PIPER_VOICE = localStorage.getItem('ap.voice') || 'ru_RU-dmitri-medium';
+const PIPER_URL = '/node_modules/@mintplex-labs/piper-tts-web/dist/piper-tts-web.js';
 
-async function loadPiper() {
-    if (piper) return piper;
-    if (!piperLoading) {
-        piperLoading = (async () => {
-            const mod = await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web@1.0.5/+esm');
-            const Ctor = mod.PiperTTS || mod.TTS || mod.default?.PiperTTS || mod.default?.TTS;
-            if (!Ctor) throw new Error('в пакете не найден класс TTS: ' + Object.keys(mod).join(', '));
-            piper = new Ctor();
-            return piper;
-        })();
-        piperLoading.catch(() => { piperLoading = null; }); // позволить ретрай
+let modPromise = null;
+let session = null; // TtsSession держит воркера тёплым
+
+function loadPiper() {
+    if (!modPromise) {
+        modPromise = import(PIPER_URL);
+        modPromise.catch(() => { modPromise = null; }); // позволить ретрай
     }
-    return piperLoading;
+    return modPromise;
 }
 
 let currentAudio = null;
@@ -29,41 +23,66 @@ export const voice = {
     async speak(text, engine) {
         if (engine === 'off' || !text) return { ok: false, why: 'off' };
         this.stop();
-        if (engine === 'webspeech') return webspeechSpeak(text);
         if (engine === 'piper') return piperSpeak(text);
+        if (engine === 'webspeech') return webspeechSpeak(text);
         return { ok: false, why: 'unknown engine' };
     },
 
     stop() {
         if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-        if ('visualViewport' in window && window.speechSynthesis) window.speechSynthesis.cancel();
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     },
 
-    // статусы для строки внизу UI
-    async status(engine) {
-        if (engine === 'piper') {
-            try { await loadPiper(); return 'Piper готов, голос ' + PIPER_VOICE; }
-            catch (e) { return 'Piper недоступен: ' + e.message; }
-        }
-        if (engine === 'webspeech') {
-            return 'Встроенный голос: ' + (ruVoiceName() || 'русских голосов ОС не найдено');
-        }
+    async status(engine, onProgress) {
+        if (engine === 'piper') return piperStatus(onProgress);
+        if (engine === 'webspeech') return 'Встроенный голос: ' + (ruVoiceName() || 'русских голосов ОС не найдено');
         return 'Голос выключен';
     },
 };
 
+async function piperStatus(onProgress) {
+    try {
+        const { TtsSession, predict, stored } = await loadPiper();
+        const have = stored ? await stored() : [];
+        if (session) return 'Piper готов, голос ' + PIPER_VOICE;
+        // пытаемся приготовить сессию с прогрессом первой загрузки
+        if (TtsSession) {
+            session = await TtsSession.create({
+                voiceId: PIPER_VOICE,
+                progress: (p) => onProgress && onProgress(p),
+            });
+            return 'Piper готов, голос ' + PIPER_VOICE;
+        }
+        // старый API — просто функция predict
+        void predict; // лениво дернётся при speak
+        return 'Piper готов (базовый), голос ' + PIPER_VOICE + (have.length ? '' : ' (первый ответ качает модель)');
+    } catch (e) {
+        session = null;
+        return 'Piper недоступен: ' + (e && e.message ? e.message : e);
+    }
+}
+
 async function piperSpeak(text) {
     try {
-        const tts = await loadPiper();
-        const wav = await tts.predict({ text, voiceId: PIPER_VOICE });
+        let wav;
+        if (session) {
+            wav = await session.predict(text);
+        } else {
+            const mod = await loadPiper();
+            const { predict } = mod;
+            if (typeof predict !== 'function') {
+                throw new Error('экспорты пакета: ' + Object.keys(mod).join(', '));
+            }
+            wav = await predict({ text, voiceId: PIPER_VOICE });
+        }
         currentAudio = new Audio();
         currentAudio.src = URL.createObjectURL(wav);
         await currentAudio.play();
         return { ok: true };
     } catch (e) {
-        // пайпер не смонтировался (нет сети/WASM) — падаем на встроенный, не молчим
-        const fb = webspeechSpeak(text);
-        return { ok: fb.ok, fellBack: true, why: e.message };
+        // Piper смонтировался плохо — падаем на встроенный, но ругаемся в консоль
+        console.warn('[voice] piper failed:', e);
+        return webspeechSpeak(text);
     }
 }
 
@@ -75,9 +94,10 @@ function ruVoiceName() {
 
 function webspeechSpeak(text) {
     if (!('speechSynthesis' in window)) return { ok: false, why: 'нет speechSynthesis' };
-    const u = new SpeechSynthesisUtterance(text);
     const ru = speechSynthesis.getVoices().filter(v => v.lang && v.lang.toLowerCase().startsWith('ru'));
-    if (ru.length) u.voice = ru[0];
+    if (!ru.length) return { ok: false, why: 'голосов ОС нет (в Electron так и есть — нужен Piper)' };
+    const u = new SpeechSynthesisUtterance(text);
+    u.voice = ru[0];
     u.rate = 0.98; u.pitch = 0.92; // пониже — поворчливей
     speechSynthesis.speak(u);
     return { ok: true };

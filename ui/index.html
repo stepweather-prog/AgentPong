@@ -17,36 +17,38 @@
 
     <!-- Диалоговая колонка -->
     <div id="talk">
-        <!-- окно агента: газетный фон + текст -->
+        <!-- окно агента: газетный фон, на нём же реплика и строка ввода -->
         <div class="dialog" id="dlg-agent">
             <img class="dialog-bg" src="../Asset/ui/dialog-01.webp" alt="">
             <div class="dialog-text" id="agent-text">Ба-а... клиент. И даже бесплатный. Заходи, чего уж.</div>
+            <div id="input-row">
+                <input id="say" type="text" autocomplete="off"
+                       placeholder="скажи Скряге…">
+                <button id="mic" title="говорить (ru-RU)">🎤</button>
+                <button id="send" title="отправить">➤</button>
+            </div>
         </div>
 
-        <!-- лог последних реплик -->
-        <div id="log"></div>
+        <!-- реплики прошлые — разматываются по клику -->
+        <button id="log-toggle" title="прошлые реплики">свиток разговоров ▾</button>
+        <div id="log" hidden></div>
 
-        <!-- ввод -->
-        <div id="input-row">
-            <input id="say" type="text" autocomplete="off"
-                   placeholder="скажи Скряге что-нибудь…">
-            <button id="mic" title="голосовой ввод (ru-RU)">🎤</button>
-            <button id="send" title="отправить">➤</button>
+        <!-- трамвайные пути: за шестерёнкой -->
+        <div id="toolbar">
+            <button id="gear" title="голос и мозг">⚙</button>
         </div>
-
-        <!-- трамвайные пути: голос и мозг -->
-        <div id="switches">
+        <div id="switches" hidden>
             <label>Голос:
                 <select id="voice-engine">
-                    <option value="piper">Piper (dmitri, ~60 МБ разово)</option>
+                    <option value="piper">Piper (dmitri)</option>
                     <option value="webspeech">Встроенный (0 МБ)</option>
                     <option value="off">Тихий</option>
                 </select>
             </label>
             <label>Мозг:
                 <select id="brain-engine">
-                    <option value="rules">Оффлайн-скряга (правила)</option>
-                    <option value="llm-api">LLM API (нужен ключ)</option>
+                    <option value="rules">Оффлайн-скряга</option>
+                    <option value="llm-api">LLM API (ключ)</option>
                 </select>
             </label>
             <span id="engine-status"></span>

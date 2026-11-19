@@ -92,9 +92,22 @@ mic.addEventListener('click', () => {
 send.addEventListener('click', () => handleUser(say.value));
 say.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleUser(say.value); });
 
+$('gear').addEventListener('click', () => {
+    const s = $('switches');
+    s.hidden = !s.hidden;
+    if (!s.hidden) refreshStatus();
+});
+$('log-toggle').addEventListener('click', () => {
+    const l = $('log');
+    l.hidden = !l.hidden;
+    if (!l.hidden) l.scrollTop = l.scrollHeight;
+});
+
 async function refreshStatus() {
-    status.textContent = 'готовит Голос…';
-    status.textContent = await voice.status(voiceSel.value);
+    status.textContent = '…';
+    status.textContent = await voice.status(voiceSel.value, (p) => {
+        status.textContent = `Piper: качаю модель ${(p.loaded / 1e6).toFixed(1)} / ${(p.total / 1e6).toFixed(1)} МБ`;
+    });
 }
 voiceSel.addEventListener('change', refreshStatus);
 brainSel.addEventListener('change', () => {

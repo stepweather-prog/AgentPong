@@ -9,5 +9,8 @@
   "license": "MIT",
   "devDependencies": {
     "electron": "^45.4.1"
+  },
+  "dependencies": {
+    "@mintplex-labs/piper-tts-web": "^1.0.5"
   }
 }

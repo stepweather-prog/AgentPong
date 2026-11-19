@@ -83,75 +83,108 @@ body {
     min-height: 190px;
 }
 
-/* ---------- лог ---------- */
+/* ---------- ввод: прямо на газете ---------- */
+#input-row {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    gap: 6px;
+    padding: 0 40px 18px;
+    margin-top: -34px;
+}
+
+#say {
+    flex: 1;
+    padding: 9px 12px;
+    font-size: 15px;
+    font-family: inherit;
+    background: rgba(255,252,240,.85);
+    border: 1px solid rgba(60,50,30,.4);
+    border-radius: 8px;
+    color: #1d1a13;
+    outline: none;
+}
+
+#say:focus { border-color: #8a6d1f; box-shadow: 0 0 0 2px rgba(138,109,31,.25); }
+
+#mic, #send {
+    padding: 0 12px;
+    font-size: 16px;
+    background: rgba(29,26,19,.85);
+    border: 1px solid rgba(60,50,30,.6);
+    border-radius: 8px;
+    color: #efe8d4;
+    cursor: pointer;
+}
+
+#mic:hover, #send:hover { background: rgba(138,109,31,.9); }
+#mic.listening { background: rgba(160,40,40,.9); }
+
+/* ---------- лог-свиток ---------- */
+#log-toggle {
+    align-self: flex-start;
+    margin-left: 8px;
+    font-size: 12px;
+    font-family: inherit;
+    color: rgba(232,226,208,.55);
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+#log-toggle:hover { color: #e0c060; }
+
 #log {
-    max-height: 20vh;
+    max-height: 22vh;
     overflow-y: auto;
     font-size: 13px;
-    opacity: .75;
+    opacity: .8;
     display: flex;
     flex-direction: column;
     gap: 4px;
-    padding: 0 6px;
+    padding: 6px 10px;
 }
 
 #log .who   { font-weight: bold; font-variant: small-caps; }
 #log .u .who{ color: #7fc2ff; }
 #log .a .who{ color: #e0c060; }
 
-/* ---------- ввод ---------- */
-#input-row {
+/* ---------- шестерёнка и трамвайные пути ---------- */
+#toolbar {
     display: flex;
-    gap: 8px;
+    justify-content: flex-end;
+    margin-top: -6px;
 }
 
-#say {
-    flex: 1;
-    padding: 12px 16px;
+#gear {
     font-size: 16px;
-    font-family: inherit;
-    background: rgba(232,226,208,.1);
-    border: 1px solid rgba(232,226,208,.3);
-    border-radius: 10px;
-    color: inherit;
-    outline: none;
-}
-
-#say:focus { border-color: #e0c060; }
-
-#mic, #send {
-    padding: 0 16px;
-    font-size: 18px;
-    background: rgba(232,226,208,.12);
-    border: 1px solid rgba(232,226,208,.3);
-    border-radius: 10px;
-    color: inherit;
+    background: none;
+    border: none;
+    color: rgba(232,226,208,.6);
     cursor: pointer;
+    padding: 4px 6px;
 }
+#gear:hover { color: #e0c060; }
 
-#mic:hover, #send:hover { background: rgba(224,192,96,.25); }
-#mic.listening { background: rgba(224,96,96,.4); }
-
-/* ---------- переключатели трамвайных путей ---------- */
 #switches {
     display: flex;
-    gap: 18px;
+    gap: 14px;
     align-items: center;
-    font-size: 13px;
-    opacity: .85;
+    font-size: 12px;
     flex-wrap: wrap;
+    color: rgba(232,226,208,.8);
+    padding: 2px 4px;
 }
 
 #switches select {
     font-family: inherit;
     background: #1d2631;
-    color: inherit;
+    color: #e8e2d0;
     border: 1px solid rgba(232,226,208,.3);
     border-radius: 8px;
-    padding: 4px 8px;
+    padding: 3px 6px;
 }
 
-#engine-status { font-size: 12px; opacity: .8; }
+#engine-status { font-size: 11px; opacity: .85; flex-basis: 100%; }
 
 @media (max-width: 900px) {
     #stage { flex-direction: column; align-items: center; overflow-y: auto; }
@@ -190,7 +223,8 @@ body.widget #widget-bar { display: flex; }
     cursor: pointer;
 }
 body.widget #talk { width: 96vw; }
-body.widget .dialog { min-height: 150px; }
-body.widget .dialog-text { min-height: 150px; padding: 34px 36px 44px; font-size: 15px; }
-body.widget #log { max-height: 12vh; }
+body.widget .dialog { min-height: 215px; }
+body.widget .dialog-text { min-height: 120px; padding: 30px 34px 8px; font-size: 15px; }
+body.widget #input-row { padding: 0 30px 14px; margin-top: -8px; }
+body.widget #log { max-height: 14vh; }
 body.widget #switches { font-size: 11px; gap: 10px; }
