@@ -1,18 +1,17 @@
 // AgentPong — мозг #2: бесплатная LLM через OpenRouter (free tier).
-// Ключ лежит в localStorage ТОЛЬКО у пользователя, в репо не попадает.
-// Персона Глосса Скряги — в системном промпте.
+// Ключ вводится в настройках (⚙), живёт в localStorage, в репо не попадает.
+// Бесплатный ключ: openrouter.ai → регистрация → Keys → Create Key.
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-
-// бесплатные модели на OpenRouter free tier (периодически меняются — поле редактируемое)
 const FREE_MODEL = (typeof localStorage !== 'undefined' && localStorage.getItem('ap.model')) || 'meta-llama/llama-3.2-3b-instruct:free';
 
 const PERSONA = [
     'Ты — Глосс Скряга, виртуальный агент-навигатор проекта AgentPong.',
-    'Характер: скупой, саркастичный, ворчит про бесплатность и экономию байтов,',
-    'но по существу вопроса отвечает чётко и полезно (вредить не наносить вреда — принцип «не навреди»).',
-    'Говоришь по-русски, коротко (1-3 предложения), с иронией, без длинных нотаций.',
-    'Любимые темы: пусть всё бесплатно, живые узлы P2P, протокол HTTPR, безопасная связь.',
+    'Характер: скупой, саркастичный, ворчишь про бесплатность и экономию байтов,',
+    'но по существу вопроса отвечаешь чётко, точно и полезно. Принцип «не навреди» — железно.',
+    'Говоришь по-русски, коротко (1-3 предложения), с иронией и фирменной жадностью,',
+    'но без грубости и без длинных нотаций.',
+    'Любимые темы: всё бесплатно, живые узлы P2P, протокол HTTPR, одноразовые сессии, без хранения.',
 ].join(' ');
 
 export const llmBrain = {
@@ -21,9 +20,10 @@ export const llmBrain = {
     async respond(input, history = []) {
         const key = localStorage.getItem('ap.openrouter_key');
         if (!key) {
-            const k = prompt('Ключ OpenRouter (бесплатный: openrouter.ai → Keys). Останется в твоём браузере, в репо не попадёт:');
-            if (!k) return { text: 'Без ключа останусь тупеньким, но гипнотически честным. Правила-скряга на подхвате.', emotion: 'shrug' };
-            localStorage.setItem('ap.openrouter_key', k.trim());
+            return {
+                text: 'Мозг-облако без ключа — как сейф без стенки. Впиши OpenRouter ключ в настройках (⚙), регистрация бесплатная. А пока правила-скряга.',
+                emotion: 'shrug',
+            };
         }
         try {
             const messages = [
@@ -37,11 +37,18 @@ export const llmBrain = {
             const resp = await fetch(OPENROUTER_URL, {
                 method: 'POST',
                 headers: {
-                    'Authorization': 'Bearer ' + localStorage.getItem('ap.openrouter_key'),
+                    'Authorization': 'Bearer ' + key,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ model: FREE_MODEL, messages }),
             });
+            if (resp.status === 401) {
+                localStorage.removeItem('ap.openrouter_key');
+                return { text: 'Ключ Open Router отвергнут — стёр его. Возьми свежий в настройках.', emotion: 'stern' };
+            }
+            if (resp.status === 429) {
+                return { text: 'Дневная халява израсходована. Приходи завтра — бесплатность не любит спешки.', emotion: 'waiting' };
+            }
             if (!resp.ok) throw new Error('HTTP ' + resp.status);
             const data = await resp.json();
             const text = data?.choices?.[0]?.message?.content?.trim();
@@ -49,14 +56,13 @@ export const llmBrain = {
             return { text, emotion: guessEmotion(text) };
         } catch (e) {
             return {
-                text: 'Облако прижалось... ' + e.message + '. Работаешь, кстати, бесплатно — упёрлись в лимит или ключ не тот. А правила у меня при себе.',
-                emotion: 'annoyed',
+                text: 'Облако не отозвалось: ' + (e && e.message ? e.message : e) + '. Правила-скряга всегда при мне — надёжнее облака моё нутро.',
+                emotion: 'doubt',
             };
         }
     },
 };
 
-// грубая разметка тона ответа -> эмоция для спрайта
 function guessEmotion(text) {
     const t = text.toLowerCase();
     if (/(не знаю|нет данных|хм|затрудняюсь)/.test(t)) return 'idk';

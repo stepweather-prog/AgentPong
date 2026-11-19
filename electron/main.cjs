@@ -107,6 +107,27 @@ ipcMain.on('ap:minimize', () => hideWin());
 ipcMain.on('ap:quit', () => { quitting = true; app.quit(); });
 ipcMain.on('ap:drag-start', () => { if (win) win.webContents.send('ap:drag'); });
 
+/* ---------- системный TTS Windows (0 МБ, оффлайн, надёжно) ---------- */
+const { spawn } = require('child_process');
+
+ipcMain.handle('tts:ps', (event, text) => {
+    return new Promise((resolve) => {
+        const textB64 = Buffer.from(String(text || ''), 'utf8').toString('base64');
+        const script =
+            '$s = New-Object System.Speech.Synthesis.SpeechSynthesizer; ' +
+            "$v = $s.GetInstalledVoices() | Where-Object { $_.VoiceInfo.Culture.Name -like 'ru*' } | Select-Object -First 1; " +
+            'if ($v) { $s.SelectVoice($v.VoiceInfo.Name) }; ' +
+            "$t = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('" + textB64 + "')); " +
+            '$s.Speak($t)';
+        const args = ['-NoProfile', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')];
+        const p = spawn('powershell.exe', args, { windowsHide: true });
+        let done = false;
+        const finish = (ok, code) => { if (!done) { done = true; resolve(ok); } };
+        p.on('error', () => finish(false));
+        p.on('exit', (code) => finish(code === 0, code));
+    });
+});
+
 /* ---------- старт ---------- */
 app.whenReady().then(async () => {
     const { port } = await startServer();

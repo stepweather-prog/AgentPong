@@ -15,18 +15,12 @@
         <div id="agent-caption">Глосс Скряга</div>
     </div>
 
-    <!-- Диалоговая колонка -->
+    <!-- Диалоговая колонка: его газета и твоя газета -->
     <div id="talk">
-        <!-- окно агента: газетный фон, на нём же реплика, ввод и настройки -->
+        <!-- ЕГО газета: реплика Скряги -->
         <div class="dialog" id="dlg-agent">
             <img class="dialog-bg" src="../Asset/ui/dialog-01.webp" alt="">
             <div class="dialog-text" id="agent-text">Ба-а... клиент. И даже бесплатный. Заходи, чего уж.</div>
-            <div id="input-row">
-                <input id="say" type="text" autocomplete="off"
-                       placeholder="скажи Скряге…">
-                <button id="mic" title="говорить (ru-RU)">🎤</button>
-                <button id="send" title="отправить">➤</button>
-            </div>
             <!-- трамвайные пути: шестерёнка + всплывающая панель -->
             <div id="toolbar">
                 <button id="gear" title="голос и мозг">⚙</button>
@@ -35,18 +29,34 @@
                 <label>Голос:
                     <select id="voice-engine">
                         <option value="piper">Piper (dmitri)</option>
-                        <option value="webspeech">Встроенный (0 МБ)</option>
+                        <option value="win">Системный Windows (0 МБ)</option>
+                        <option value="webspeech">Браузерный встроенный</option>
                         <option value="off">Тихий</option>
                     </select>
                 </label>
                 <label>Мозг:
                     <select id="brain-engine">
                         <option value="rules">Оффлайн-скряга</option>
-                        <option value="deepseek">DeepSeek (халява-ключ)</option>
                         <option value="llm-api">OpenRouter (free tier)</option>
                     </select>
                 </label>
+                <label class="key-row">OpenRouter ключ:
+                    <input id="or-key" type="password" placeholder="sk-or-…">
+                    <button id="or-save" title="сохранить ключ">✓</button>
+                </label>
                 <span id="engine-status"></span>
+            </div>
+        </div>
+
+        <!-- ТВОЯ газета: последняя реплика + строка ввода -->
+        <div class="dialog" id="dlg-user">
+            <img class="dialog-bg" src="../Asset/ui/dialog-02.webp" alt="">
+            <div class="dialog-text user" id="user-text"></div>
+            <div id="input-row">
+                <input id="say" type="text" autocomplete="off"
+                       placeholder="скажи Скряге…">
+                <button id="mic" title="говорить (ru-RU)">🎤</button>
+                <button id="send" title="отправить">➤</button>
             </div>
         </div>
 

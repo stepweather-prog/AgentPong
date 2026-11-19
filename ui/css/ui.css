@@ -89,9 +89,19 @@ body {
     z-index: 2;
     display: flex;
     gap: 6px;
-    padding: 0 40px 18px;
-    margin-top: -34px;
+    padding: 0 40px 16px;
+    margin-top: -14px;
 }
+
+/* твоя газета — реплика поменьше */
+.dialog-text.user {
+    min-height: 58px;
+    padding: 30px 46px 4px;
+    font-size: 15px;
+    color: #43391f;
+    font-style: italic;
+}
+#dlg-user { min-height: 150px; }
 
 #say {
     flex: 1;
@@ -197,6 +207,31 @@ body {
 }
 
 #engine-status { font-size: 11px; opacity: .85; max-width: 300px; }
+
+/* поле ключа OpenRouter */
+.key-row { width: 100%; }
+#or-key {
+    flex: 1;
+    margin-left: 4px;
+    background: #1d2631;
+    color: #e8e2d0;
+    border: 1px solid rgba(232,226,208,.3);
+    border-radius: 8px;
+    padding: 5px 8px;
+    font-size: 12px;
+    font-family: inherit;
+    outline: none;
+}
+#or-save {
+    background: rgba(224,192,96,.85);
+    border: none;
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    color: #1d1a13;
+}
+#or-save:hover { background: #e0c060; }
 
 @media (max-width: 900px) {
     #stage { flex-direction: column; align-items: center; overflow-y: auto; }

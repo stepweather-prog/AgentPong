@@ -56,6 +56,7 @@ async function agentSay(text, emotion = 'neutral') {
 async function handleUser(input) {
     const clean = (input || '').trim();
     if (!clean) return;
+    $('user-text').textContent = clean;
     history.push({ who: 'user', text: clean });
     logLine('user', clean);
     say.value = '';
@@ -109,6 +110,26 @@ async function refreshStatus() {
         status.textContent = `Piper: качаю модель ${(p.loaded / 1e6).toFixed(1)} / ${(p.total / 1e6).toFixed(1)} МБ`;
     });
 }
+
+// ключ OpenRouter — вводится в настройках, хранится только локально
+$('or-save').addEventListener('click', () => {
+    const k = $('or-key').value.trim();
+    if (!k) { status.textContent = 'поле пустое — ключ не сохранён'; return; }
+    localStorage.setItem('ap.openrouter_key', k);
+    $('or-key').value = '';
+    status.textContent = 'ключ OpenRouter сохранён (только в этом браузере)';
+});
+
+// выбор голоса/мозга запоминаем; в виджете — системный голос по умолчанию
+function defaultVoiceEngine() {
+    if (localStorage.getItem('ap.engine')) return localStorage.getItem('ap.engine');
+    return window.apWidget ? 'win' : 'piper';
+}
+voiceSel.value = defaultVoiceEngine();
+voiceSel.addEventListener('change', () => {
+    localStorage.setItem('ap.engine', voiceSel.value);
+    refreshStatus();
+});
 voiceSel.addEventListener('change', refreshStatus);
 brainSel.addEventListener('change', () => {
     if (brainSel.value === 'llm-api') getBrain('llm-api'); // попросит ключ при первом ответе
