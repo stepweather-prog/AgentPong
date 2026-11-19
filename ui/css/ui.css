@@ -158,3 +158,39 @@ body {
     #agent { height: 40vh; }
     #talk  { width: 92vw; }
 }
+
+/* ---------- виджет-режим (Electron: прозрачное окно без рамки) ---------- */
+body.widget { background: transparent; }
+body.widget #stage { padding: 0; gap: 0; flex-direction: column; align-items: center; justify-content: flex-start; }
+body.widget #agent { height: 38vh; }
+body.widget #agent-slot {
+    position: relative;
+    -webkit-app-region: drag;      /* тащим за агента */
+    cursor: grab;
+    margin-top: 4px;
+}
+body.widget #agent-slot:active { cursor: grabbing; }
+body.widget #agent-caption { -webkit-app-region: no-drag; }
+body.widget #widget-bar {
+    position: absolute;
+    top: 2px; right: 6px;
+    display: flex; gap: 4px;
+    -webkit-app-region: no-drag;
+    z-index: 10;
+}
+#widget-bar { display: none; }
+body.widget #widget-bar { display: flex; }
+#widget-bar button {
+    width: 26px; height: 22px;
+    font-size: 12px; line-height: 1;
+    background: rgba(20,27,36,.7);
+    color: #e8e2d0;
+    border: 1px solid rgba(232,226,208,.3);
+    border-radius: 6px;
+    cursor: pointer;
+}
+body.widget #talk { width: 96vw; }
+body.widget .dialog { min-height: 150px; }
+body.widget .dialog-text { min-height: 150px; padding: 34px 36px 44px; font-size: 15px; }
+body.widget #log { max-height: 12vh; }
+body.widget #switches { font-size: 11px; gap: 10px; }

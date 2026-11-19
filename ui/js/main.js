@@ -2,6 +2,7 @@
 import { srcOf, EMOTIONS, IDLE } from './emotions.js';
 import { getBrain } from './brain/brain.js';
 import { voice } from './voice/voice.js';
+import { initWidget } from './widget.js';
 
 const $ = (id) => document.getElementById(id);
 const agent = $('agent'), agentText = $('agent-text'), log = $('log');
@@ -105,5 +106,14 @@ brainSel.addEventListener('change', () => {
 if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = refreshStatus;
 
 /* ---------- старт ---------- */
+initWidget(agentSay);           // виджет-режим: трей, перетаскивание, ворчание
+agent.addEventListener('mousedown', () => {
+    if (window.apWidget) window.apWidget.dragStart();
+});
+agent.addEventListener('dblclick', () => {  // ладошка: скажет что-нибудь сам
+    const idle = getBrain(brainSel.value);
+    idle.respond('', []).then(({ text, emotion }) => agentSay(text, emotion));
+});
+
 startIdle();
 refreshStatus();

@@ -1,0 +1,13 @@
+{
+  "name": "agentpong",
+  "version": "0.1.0",
+  "description": "AgentPong — Глосс Скряга: виджет-агент поверх протокола HTTPR",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "widget": "electron ."
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^45.4.1"
+  }
+}
