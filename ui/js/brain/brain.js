@@ -1,11 +1,13 @@
-// AgentPong — роутер мозгов. Трамвайные пути: rules | llm-api.
-// Смена движка — один селектор, интерфейс общий: respond(input, history) -> {text, emotion}
+// AgentPong — роутер мозгов. По убыванию автономности:
+// web-llm — локальная модель без ключей и сети; rules — правила; llm-api — облако (VPN).
 
 import { rulesBrain } from './rules.js';
 import { llmBrain } from './llm-api.js';
+import { localBrain } from './local-llm.js';
 
 const BRAINS = {
     'rules': rulesBrain,
+    'web-llm': localBrain,
     'llm-api': llmBrain,
 };
 

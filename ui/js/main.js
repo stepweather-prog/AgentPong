@@ -132,8 +132,14 @@ voiceSel.addEventListener('change', () => {
 });
 voiceSel.addEventListener('change', refreshStatus);
 brainSel.addEventListener('change', () => {
-    if (brainSel.value === 'llm-api') getBrain('llm-api'); // попросит ключ при первом ответе
-    refreshStatus();
+    if (brainSel.value === 'web-llm') {
+        // готовим локальный мозг сразу: прогресс в статусе
+        status.textContent = 'готовит локальный мозг…';
+        getBrain('web-llm').warmup((s) => { status.textContent = 'мозг: ' + s; })
+            .then((t) => { status.textContent = t; });
+    } else {
+        refreshStatus();
+    }
 });
 
 // список голосов ОС мог ещё не прогрузиться
