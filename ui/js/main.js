@@ -17,6 +17,7 @@ let idleIdx = 0, idleTimer = null, emotionUntil = 0;
 
 function startIdle() {
     idleTimer = setInterval(() => {
+        if (document.body.classList.contains('dragging')) return;  // тащим — не меняем позу
         if (performance.now() < emotionUntil) return; // эмоция ещё играет
         idleIdx = (idleIdx + 1) % IDLE.length;
         if (agent.dataset.emotion) {   // эмоция кончилась — тихо вернуть idle
@@ -285,9 +286,14 @@ if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = refreshStatus
 
 /* ---------- старт ---------- */
 initWidget(agentSay);           // виджет-режим: трей, перетаскивание, ворчание
+// перетаскивание: замираем (анимации стоп, курсор-лапка) — иначе трухает с лагом
 agent.addEventListener('mousedown', () => {
-    if (window.apWidget) window.apWidget.dragStart();
+    if (!window.apWidget) return;
+    document.body.classList.add('dragging');
+    window.apWidget.dragStart();
 });
+document.addEventListener('mouseup', () => document.body.classList.remove('dragging'));
+window.addEventListener('blur', () => document.body.classList.remove('dragging'));
 agent.addEventListener('dblclick', () => {  // ладошка: скажет что-нибудь сам
     const idle = getBrain(brainSel.value);
     idle.respond('', []).then(({ text, emotion }) => agentSay(text, emotion));

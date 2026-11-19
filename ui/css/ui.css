@@ -1,6 +1,11 @@
 /* AgentPong — Глосс Скряга: сцена */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* никакого синего выделения при перетаскивании виджета */
+* { user-select: none; -webkit-user-select: none; }
+input, textarea { user-select: text; -webkit-user-select: text; }
+img { -webkit-user-drag: none; user-drag: none; }
+
 body {
     font-family: Georgia, 'Times New Roman', serif;
     background: radial-gradient(circle at 30% 20%, #2e3b4e, #141b24 70%);
@@ -306,6 +311,9 @@ body.widget #agent-slot {
     margin-top: 4px;
 }
 body.widget #agent-slot:active { cursor: grabbing; }
+/* пока тащим — замираем: анимация дыхания и смена поз убирают лаг перетаскивания */
+body.dragging #agent { animation-play-state: paused; }
+body.dragging #agent-slot { cursor: grabbing; }
 body.widget #agent-caption { -webkit-app-region: no-drag; }
 body.widget #widget-bar {
     position: absolute;
