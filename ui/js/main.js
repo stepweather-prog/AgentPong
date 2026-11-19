@@ -1,7 +1,7 @@
 // AgentPong — Глосс Скряга: сцена
 import { srcOf, EMOTIONS, IDLE } from './emotions.js';
 import { getBrain, brainList } from './brain/brain.js';
-import { LOCAL_MODELS, setModel, currentModel, checkModel, hwBudgetMB } from './brain/local-llm.js';
+import { LOCAL_MODELS, setModel, currentModel, checkModel, hwBudgetMB, initModels, f16State } from './brain/local-llm.js';
 import { voice } from './voice/voice.js';
 import { initWidget } from './widget.js';
 
@@ -133,6 +133,13 @@ voiceSel.addEventListener('change', () => {
 });
 voiceSel.addEventListener('change', refreshStatus);
 
+// проба голоса: сразу слышно, кто на линии
+$('voice-test').addEventListener('click', async () => {
+    status.textContent = 'пробую голос…';
+    const r = await voice.speak('Раз, два. Проба голоса. Ну хоть кто-нибудь здесь живой?', voiceSel.value);
+    status.textContent = r.ok ? 'голос: ' + r.engine : 'голос молчит: ' + (r.why || '?');
+});
+
 // мозг тоже запоминаем: без этого каждый старт снова rules — и модель «не работает»
 brainSel.value = localStorage.getItem('ap.brain') || 'rules';
 brainSel.addEventListener('change', () => {
@@ -161,14 +168,25 @@ function warmLocal() {
     });
 }
 
-// заполнить выбор локальной модели и держать в актуальном состоянии
+// заполнить выбор локальной модели: после разведки f16, несовместимое — потушено
 const llmModelSel = $('llm-model');
-for (const m of LOCAL_MODELS) {
-    const o = document.createElement('option');
-    o.value = m.id; o.textContent = m.label + ' (~' + m.mb + ' МБ закачка)';
-    if (m.id === currentModel()) o.selected = true;
-    llmModelSel.appendChild(o);
-}
+let llmReady = initModels().then(() => {
+    const noF16 = f16State() === false;
+    for (const m of LOCAL_MODELS) {
+        const o = document.createElement('option');
+        const dead = m.f16 && noF16;
+        o.value = m.id;
+        o.textContent = m.label + ' (~' + m.mb + ' МБ)' + (dead ? ' — карта не умеет f16' : '');
+        if (dead) o.disabled = true;
+        if (m.id === currentModel()) o.selected = true;
+        llmModelSel.appendChild(o);
+    }
+    if (noF16 && !llmModelSel.selectedOptions.length) {
+        const first = [...llmModelSel.options].find((o) => !o.disabled);
+        if (first) llmModelSel.value = first.value;
+    }
+    console.log('[brain] model: ' + currentModel() + ', f16: ' + f16State());
+});
 llmModelSel.addEventListener('change', () => {
     // автоконтроль памяти: не даём выбрать модель, которая поплавит ПК
     const verdict = checkModel(llmModelSel.value);

@@ -42,8 +42,8 @@ function startServer() {
 /* ---------- окно ---------- */
 function createWindow(url) {
     win = new BrowserWindow({
-        width: 400,
-        height: 640,
+        width: 420,
+        height: 680,
         frame: false,
         transparent: true,
         alwaysOnTop: true,
@@ -194,6 +194,10 @@ ipcMain.handle('hw:info', async () => {
 });
 
 /* ---------- старт ---------- */
+// разрешаем Dawn-фичу shader-f16 там, где карта умеет, но браузер по умолчанию
+// держит её за флагом (иначе q4f16-модели падают с 'requires shader-f16')
+app.commandLine.appendSwitch('enable-dawn-features', 'allow_unsafe_apis');
+
 app.whenReady().then(async () => {
     const { port } = await startServer();
     createWindow(`http://localhost:${port}/ui/?widget=1`);

@@ -3,21 +3,53 @@
 // Ни ключей, ни VPN, ни облака. Разовая закачка весов — потом оффлайн.
 
 // от крохотной к умной (под слабое железо; оценка VRAM: веса + кэш контекста).
-// ВАЖНО: web-llm держит модель ЦЕЛИКОМ в видеопамяти, на CPU не выгружает —
-// поэтому моделей >4 ГБ нет физически (7B/9B поплыли бы на машине с RX 560).
+// ВАЖНО: web-llm держит модель ЦЕЛИКОМ в видеопамяти, на CPU не выгружает.
+// Ещё важнее: q4f16/q0f16 требуют WebGPU-расширение shader-f16 — на RX 560 его нет
+// (полевой диагноз: «This model requires WebGPU extension shader-f16»).
+// Поэтому основа списка — f32-варианты: они тянутся любой картой.
 export const LOCAL_MODELS = [
-    { id: 'SmolLM2-135M-Instruct-q0f16-MLC',    label: 'SmolLM 135M — кроха',            vramMB: 380,  mb: 150 },
-    { id: 'SmolLM2-360M-Instruct-q4f16_1-MLC',  label: 'SmolLM 360M — шустрик',           vramMB: 550,  mb: 300 },
-    { id: 'Qwen3-0.6B-q4f16_1-MLC',             label: 'Qwen3 0.6B — умный малыш',        vramMB: 950,  mb: 500 },
-    { id: 'Qwen3-1.7B-q4f16_1-MLC',             label: 'Qwen3 1.7B — рабочий',            vramMB: 2000, mb: 1100 },
-    { id: 'gemma-2-2b-it-q4f16_1-MLC',          label: 'Gemma 2 2B — болтун',             vramMB: 2200, mb: 1500 },
-    { id: 'Llama-3.2-3B-Instruct-q4f16_1-MLC',  label: 'Llama 3.2 3B — толковый',         vramMB: 2700, mb: 1900 },
-    { id: 'Qwen3-4B-q4f16_1-MLC',               label: 'Qwen3 4B — потолок (впритык!)',   vramMB: 3400, mb: 2600 },
+    { id: 'SmolLM2-135M-Instruct-q0f32-MLC',   label: 'SmolLM 135M — кроха',        vramMB: 700,  mb: 550,  f16: false },
+    { id: 'SmolLM2-360M-Instruct-q0f32-MLC',   label: 'SmolLM 360M — шустрик',      vramMB: 1700, mb: 1400, f16: false },
+    { id: 'Qwen3-1.7B-q4f32_1-MLC',            label: 'Qwen3 1.7B — рабочий',       vramMB: 2400, mb: 1200, f16: false },
+    { id: 'Qwen3-0.6B-q0f32-MLC',              label: 'Qwen3 0.6B — умный малыш',   vramMB: 2700, mb: 2300, f16: false },
+    { id: 'gemma-2-2b-it-q4f32_1-MLC',         label: 'Gemma 2 2B — болтун',        vramMB: 2900, mb: 1700, f16: false },
+    { id: 'Llama-3.2-3B-Instruct-q4f32_1-MLC', label: 'Llama 3.2 3B — толковый',    vramMB: 3400, mb: 2500, f16: false },
+    // f16-варианты — мельче и точнее, но только с шейдером f16:
+    { id: 'Qwen3-0.6B-q4f16_1-MLC',            label: 'Qwen3 0.6B [f16]',           vramMB: 950,  mb: 500,  f16: true },
+    { id: 'Qwen3-1.7B-q4f16_1-MLC',            label: 'Qwen3 1.7B [f16]',           vramMB: 2000, mb: 1100, f16: true },
+    { id: 'SmolLM2-135M-Instruct-q0f16-MLC',   label: 'SmolLM 135M [f16]',          vramMB: 380,  mb: 150,  f16: true },
+    { id: 'SmolLM2-360M-Instruct-q4f16_1-MLC', label: 'SmolLM 360M [f16]',          vramMB: 550,  mb: 300,  f16: true },
 ];
 
-let modelId = (typeof localStorage !== 'undefined' && localStorage.getItem('ap.llm_model')) || LOCAL_MODELS[1].id;
+// предпочтительный порядок авто-перехода, если сохранённая модель не годится
+const PREFERRED = [
+    'Qwen3-1.7B-q4f32_1-MLC',
+    'Qwen3-0.6B-q0f32-MLC',
+    'SmolLM2-360M-Instruct-q0f32-MLC',
+    'SmolLM2-135M-Instruct-q0f32-MLC',
+];
+
+let modelId = (typeof localStorage !== 'undefined' && localStorage.getItem('ap.llm_model'))
+    || PREFERRED[0];
 
 export function currentModel() { return modelId; }
+
+/* ---------- умеет ли карта/браузер f16 ---------- */
+let f16Ok = null;   // false = нет; null = ещё не проверяли
+
+export async function detectF16() {
+    if (f16Ok !== null) return f16Ok;
+    try {
+        if (!('gpu' in navigator)) { f16Ok = false; return false; }
+        const adapter = await navigator.gpu.requestAdapter();
+        f16Ok = !!(adapter && adapter.features && adapter.features.has('shader-f16'));
+    } catch (_) {
+        f16Ok = false;
+    }
+    return f16Ok;
+}
+
+export function f16State() { return f16Ok; }
 
 export function setModel(id) {
     if (!LOCAL_MODELS.some(m => m.id === id)) return false;
@@ -26,6 +58,23 @@ export function setModel(id) {
     if (typeof localStorage !== 'undefined') localStorage.setItem('ap.llm_model', id);
     enginePromise = null;   // следующая сессия поднимет выбранную
     return true;
+}
+
+// при старте: уместить сохранённый выбор под реальное железо
+export async function initModels() {
+    await detectF16();
+    const saved = LOCAL_MODELS.find(m => m.id === modelId);
+    const ok = saved && (!saved.f16 || f16Ok);
+    if (!ok) {
+        const compat = PREFERRED.filter(id => {
+            const m = LOCAL_MODELS.find(x => x.id === id);
+            return m && (!m.f16 || f16Ok);
+        });
+        modelId = compat[0] || LOCAL_MODELS[0].id;
+        if (typeof localStorage !== 'undefined') localStorage.setItem('ap.llm_model', modelId);
+        enginePromise = null;
+    }
+    return modelId;
 }
 
 /* ---------- автоконтроль памяти: чтобы ПК не поплыл ---------- */
@@ -41,6 +90,13 @@ export function hwBudgetMB() {
 export function checkModel(id) {
     const m = LOCAL_MODELS.find(x => x.id === id);
     if (!m) return { ok: 'block', why: 'неизвестная модель' };
+    if (m.f16 && f16Ok === false) {
+        return {
+            ok: 'block',
+            why: 'этой модели нужен WebGPU-шейдер f16 — наша карта/браузер его не умеет. ' +
+                 'Бери модель без пометки [f16]',
+        };
+    }
     const budget = hwBudgetMB();
     if (budget && m.vramMB > budget) {
         return {
