@@ -99,6 +99,15 @@ $('gear').addEventListener('click', () => {
     s.hidden = !s.hidden;
     if (!s.hidden) refreshStatus();
 });
+
+// выход из настроек: крестик, клик мимо окна, Esc
+function closeSwitches() { $('switches').hidden = true; }
+$('switches-close').addEventListener('click', closeSwitches);
+$('switches').addEventListener('click', (e) => e.stopPropagation());
+document.addEventListener('click', (e) => {
+    if (!$('switches').hidden && !$('switches').contains(e.target)) closeSwitches();
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSwitches(); });
 $('log-toggle').addEventListener('click', () => {
     const l = $('log');
     l.hidden = !l.hidden;
