@@ -5,7 +5,7 @@
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 // бесплатные модели на OpenRouter free tier (периодически меняются — поле редактируемое)
-const FREE_MODEL = localStorage.getItem('ap.model') || 'meta-llama/llama-3.2-3b-instruct:free';
+const FREE_MODEL = (typeof localStorage !== 'undefined' && localStorage.getItem('ap.model')) || 'meta-llama/llama-3.2-3b-instruct:free';
 
 const PERSONA = [
     'Ты — Глосс Скряга, виртуальный агент-навигатор проекта AgentPong.',

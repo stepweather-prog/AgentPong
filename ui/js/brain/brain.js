@@ -3,9 +3,11 @@
 
 import { rulesBrain } from './rules.js';
 import { llmBrain } from './llm-api.js';
+import { deepseekBrain } from './deepseek.js';
 
 const BRAINS = {
     'rules': rulesBrain,
+    'deepseek': deepseekBrain,
     'llm-api': llmBrain,
 };
 
