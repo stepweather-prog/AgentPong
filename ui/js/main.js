@@ -1,7 +1,7 @@
 // AgentPong — Глосс Скряга: сцена
 import { srcOf, EMOTIONS, IDLE } from './emotions.js';
 import { getBrain, brainList } from './brain/brain.js';
-import { LOCAL_MODELS, setModel, currentModel } from './brain/local-llm.js';
+import { LOCAL_MODELS, setModel, currentModel, checkModel, hwBudgetMB } from './brain/local-llm.js';
 import { voice } from './voice/voice.js';
 import { initWidget } from './widget.js';
 
@@ -151,15 +151,49 @@ function warmLocal() {
 const llmModelSel = $('llm-model');
 for (const m of LOCAL_MODELS) {
     const o = document.createElement('option');
-    o.value = m.id; o.textContent = m.label;
+    o.value = m.id; o.textContent = m.label + ' (~' + m.mb + ' МБ закачка)';
     if (m.id === currentModel()) o.selected = true;
     llmModelSel.appendChild(o);
 }
 llmModelSel.addEventListener('change', () => {
+    // автоконтроль памяти: не даём выбрать модель, которая поплавит ПК
+    const verdict = checkModel(llmModelSel.value);
+    if (verdict.ok === 'block') {
+        status.textContent = verdict.why;
+        llmModelSel.value = currentModel();   // откат выбора
+        return;
+    }
     setModel(llmModelSel.value);
-    status.textContent = 'модель сменена: ' + llmModelSel.selectedOptions[0].textContent;
+    status.textContent = 'модель сменена: ' + llmModelSel.selectedOptions[0].textContent
+        + (verdict.warn ? ' — ' + verdict.warn : '');
     if (brainSel.value === 'web-llm') warmLocal(); // поднять выбранную
 });
+
+// разведка железа для автоконтроля памяти (в виджете — честные цифры)
+async function probeHardware() {
+    if (window.apWidget && window.apWidget.hw) {
+        try {
+            const hw = await window.apWidget.hw();
+            if (hw.vramMB > 0) localStorage.setItem('ap.vram_mb', hw.vramMB);
+            const line = $('hw-line');
+            const parts = [];
+            if (hw.gpuName) parts.push('GPU: ' + hw.gpuName + (hw.vramMB ? ' (' + (hw.vramMB / 1024).toFixed(1) + ' ГБ)' : ''));
+            if (hw.ramTotalMB) parts.push('ОЗУ: ' + (hw.ramTotalMB / 1024).toFixed(1) + ' ГБ, свободно ' + (hw.ramFreeMB / 1024).toFixed(1));
+            if (parts.length) {
+                line.hidden = false;
+                line.textContent = 'железо: ' + parts.join('; ') +
+                    (hw.vramMB ? '; бюджет мозга: ' + (hwBudgetMB() / 1024).toFixed(1) + ' ГБ' : '');
+            }
+            // спасаем пользователя от сохранённой когда-то тяжёлой модели
+            const v = checkModel(currentModel());
+            if (v.ok === 'block') status.textContent = 'сохранённая модель: ' + v.why;
+        } catch (_) { /* браузерный режим — только предупреждения */ }
+    } else {
+        $('hw-line').hidden = false;
+        $('hw-line').textContent = 'видеокарта не разведана — крупные модели только с предупреждением';
+    }
+}
+probeHardware();
 
 // системный голос Windows (только в виджете): список из ОС + выбор
 const winVoiceSel = $('win-voice');
@@ -185,6 +219,16 @@ if (window.apWidget) {
                 winVoiceSel.value = ru.name;
                 localStorage.setItem('ap.win_voice', ru.name);
             }
+        }
+        // RHVoice: живые бесплатные голоса — если не стоит, отказываемся нажать ссылку
+        if (!res.voices.some((v) => /rhvoice/i.test(v.name))) {
+            const rb = $('rhvoice');
+            rb.hidden = false;
+            rb.onclick = () => {
+                const url = 'https://github.com/RHVoice/RHVoice/releases';
+                if (window.apWidget && window.apWidget.openExternal) window.apWidget.openExternal(url);
+                else window.open(url, '_blank');
+            };
         }
     });
     winVoiceSel.addEventListener('change', () => {

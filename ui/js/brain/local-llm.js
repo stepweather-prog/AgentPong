@@ -2,12 +2,17 @@
 // Модель живёт в кэше браузера/виджета, гоняет на WebGPU.
 // Ни ключей, ни VPN, ни облака. Разовая закачка весов — потом оффлайн.
 
-// от крохотной к умной (для слабого железа):
+// от крохотной к умной (под слабое железо; оценка VRAM: веса + кэш контекста).
+// ВАЖНО: web-llm держит модель ЦЕЛИКОМ в видеопамяти, на CPU не выгружает —
+// поэтому моделей >4 ГБ нет физически (7B/9B поплыли бы на машине с RX 560).
 export const LOCAL_MODELS = [
-    { id: 'SmolLM2-135M-Instruct-q0f16-MLC',    label: 'SmolLM 135M — кроха (~150 МБ)' },
-    { id: 'SmolLM2-360M-Instruct-q4f16_1-MLC',  label: 'SmolLM 360M — золотая середина (~300 МБ)' },
-    { id: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',  label: 'Qwen 0.5B — помощнее (~400 МБ)' },
-    { id: 'Llama-3.2-1B-Instruct-q4f16_1-MLC',  label: 'Llama 1B — потолок разумного (~700 МБ)' },
+    { id: 'SmolLM2-135M-Instruct-q0f16-MLC',    label: 'SmolLM 135M — кроха',            vramMB: 380,  mb: 150 },
+    { id: 'SmolLM2-360M-Instruct-q4f16_1-MLC',  label: 'SmolLM 360M — шустрик',           vramMB: 550,  mb: 300 },
+    { id: 'Qwen3-0.6B-q4f16_1-MLC',             label: 'Qwen3 0.6B — умный малыш',        vramMB: 950,  mb: 500 },
+    { id: 'Qwen3-1.7B-q4f16_1-MLC',             label: 'Qwen3 1.7B — рабочий',            vramMB: 2000, mb: 1100 },
+    { id: 'gemma-2-2b-it-q4f16_1-MLC',          label: 'Gemma 2 2B — болтун',             vramMB: 2200, mb: 1500 },
+    { id: 'Llama-3.2-3B-Instruct-q4f16_1-MLC',  label: 'Llama 3.2 3B — толковый',         vramMB: 2700, mb: 1900 },
+    { id: 'Qwen3-4B-q4f16_1-MLC',               label: 'Qwen3 4B — потолок (впритык!)',   vramMB: 3400, mb: 2600 },
 ];
 
 let modelId = (typeof localStorage !== 'undefined' && localStorage.getItem('ap.llm_model')) || LOCAL_MODELS[1].id;
@@ -21,6 +26,40 @@ export function setModel(id) {
     if (typeof localStorage !== 'undefined') localStorage.setItem('ap.llm_model', id);
     enginePromise = null;   // следующая сессия поднимет выбранную
     return true;
+}
+
+/* ---------- автоконтроль памяти: чтобы ПК не поплыл ---------- */
+// Бюджет берём из разведки железа (IPC-хук в виджете пишет ap.vram_mb).
+// Нет данных (обычный браузер) — не блокируем, но предупреждаем на крупняке.
+export function hwBudgetMB() {
+    if (typeof localStorage === 'undefined') return null;
+    const v = Number(localStorage.getItem('ap.vram_mb') || 0);
+    return v > 0 ? Math.round(v * 0.92) : null;   // 8% видеопамяти — на систему/десктоп
+}
+
+// ok:['ok'|'block'], warn — предупреждающий текст, why — причина отказа
+export function checkModel(id) {
+    const m = LOCAL_MODELS.find(x => x.id === id);
+    if (!m) return { ok: 'block', why: 'неизвестная модель' };
+    const budget = hwBudgetMB();
+    if (budget && m.vramMB > budget) {
+        return {
+            ok: 'block',
+            why: 'модели нужно ~' + Math.round(m.vramMB / 1024 * 10) / 10 +
+                 ' ГБ видеопамяти, а у нас ' + Math.round(budget / 1024 * 10) / 10 +
+                 ' ГБ — не влезет, ПК поплывёт. Выбери модель поменьше.',
+        };
+    }
+    if (budget && m.vramMB > budget * 0.80) {
+        return { ok: 'warn', warn: 'впритык к видеопамяти (' +
+                 Math.round(m.vramMB / 1024 * 10) / 10 + '/' + Math.round(budget / 1024 * 10) / 10 +
+                 ' ГБ) — если тормозит или падает, сменяй на модель ниже' };
+    }
+    if (!budget && m.vramMB >= 2700) {
+        return { ok: 'warn', warn: 'модель крупная (~' + Math.round(m.vramMB / 1024 * 10) / 10 +
+                 ' ГБ) — на слабой видеокарте может не завестись' };
+    }
+    return { ok: 'ok' };
 }
 
 let enginePromise = null;
@@ -71,13 +110,16 @@ export const localBrain = {
     async respond(input, history = [], onStatus) {
         try {
             const engine = await getEngine(onStatus);
+            // контроль контекста: хвост истории, каждую реплику подстричь —
+            // иначе у крохотной модели и у ОЗУ с нашими DDR3 плохое настроение
+            const trimmed = history.slice(-8).map(h => ({
+                role: ROLE[h.who] || 'user',
+                content: String(h.text || '').slice(0, 600),
+            }));
             const messages = [
                 { role: 'system', content: SYSTEM_PROMPT },
-                ...history.slice(-10).map(h => ({
-                    role: ROLE[h.who] || 'user',
-                    content: h.text,
-                })),
-                { role: 'user', content: input },
+                ...trimmed,
+                { role: 'user', content: String(input).slice(0, 1200) },
             ];
             const out = await engine.chat.completions.create({ messages, max_tokens: 200, temperature: 0.8 });
             const text = out?.choices?.[0]?.message?.content?.trim();

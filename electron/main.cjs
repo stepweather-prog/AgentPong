@@ -1,6 +1,6 @@
 // AgentPong — Electron-виджет Глосса Скряги
 // Окно без рамки, прозрачное, поверх всех, живёт в трее.
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, shell } = require('electron');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -106,6 +106,7 @@ function hideWin() {
 ipcMain.on('ap:minimize', () => hideWin());
 ipcMain.on('ap:quit', () => { quitting = true; app.quit(); });
 ipcMain.on('ap:drag-start', () => { if (win) win.webContents.send('ap:drag'); });
+ipcMain.on('ap:open-external', (e, url) => { if (/^https?:\/\//.test(String(url))) shell.openExternal(url); });
 
 /* ---------- системный TTS Windows (0 МБ, оффлайн, надёжно) ---------- */
 const { spawn } = require('child_process');
@@ -156,6 +157,40 @@ ipcMain.handle('tts:ps', (event, payload) => {
         "$t = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('" + textB64 + "')); " +
         '$s.Speak($t)';
     return runPs(script).then((out) => out !== null);
+});
+
+/* ---------- разведка железа (для автоконтроля памяти) ---------- */
+const osInfo = require('os');
+
+ipcMain.handle('hw:info', async () => {
+    const total = Math.round(osInfo.totalmem() / (1024 * 1024));
+    const script =
+        'Get-CimInstance Win32_VideoController | ForEach-Object { $_.Name + \'|\' + [math]::Round($_.AdapterRAM / 1MB) }';
+    let gpuName = '';
+    let vramMB = 0;
+    try {
+        const args = ['-NoProfile', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')];
+        const p = spawn('powershell.exe', args, { windowsHide: true });
+        const out = await new Promise((resolve) => {
+            let s = '';
+            p.stdout.on('data', (d) => { s += d; });
+            p.on('error', () => resolve(''));
+            p.on('exit', () => resolve(s));
+        });
+        // AdapterRAM — uint32: честен до 4 ГБ; для карт больше берём максимум строку с GPU
+        for (const line of String(out).split(/\r?\n/).filter(Boolean)) {
+            const i = line.lastIndexOf('|');
+            const name = line.slice(0, i).trim();
+            const mem = Number(line.slice(i + 1)) || 0;
+            if (!gpuName || mem > vramMB) { gpuName = name; vramMB = mem; }
+        }
+    } catch (_) { /* без GPU-инфо работаем по ОЗУ */ }
+    return {
+        gpuName,
+        vramMB: vramMB,   // если WMI не дал — 0, гвард работает только в режиме предупреждений
+        ramTotalMB: total,
+        ramFreeMB: Math.round(osInfo.freemem() / (1024 * 1024)),
+    };
 });
 
 /* ---------- старт ---------- */

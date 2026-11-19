@@ -11,4 +11,8 @@ contextBridge.exposeInMainWorld('apWidget', {
     dragStart: () => ipcRenderer.send('ap:drag-start'),
     tts: (text, voiceName) => ipcRenderer.invoke('tts:ps', { text: text, voiceName: voiceName || null }),
     voices: () => ipcRenderer.invoke('tts:voices'),
+    hw: () => ipcRenderer.invoke('hw:info'),
+    openExternal: (url) => {
+        if (/^https?:\/\//.test(String(url))) ipcRenderer.send('ap:open-external', url);
+    },
 });

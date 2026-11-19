@@ -209,6 +209,19 @@ body {
 #engine-status { font-size: 11px; opacity: .85; max-width: 300px; }
 #switches .hint { font-size: 11px; opacity: .6; max-width: 300px; font-style: italic; color: #d8d2c0; }
 
+#rhvoice {
+    font-family: inherit;
+    font-size: 11px;
+    text-align: left;
+    color: #e0c060;
+    background: rgba(138,109,31,.18);
+    border: 1px solid rgba(224,192,96,.45);
+    border-radius: 8px;
+    padding: 5px 8px;
+    cursor: pointer;
+}
+#rhvoice:hover { background: rgba(224,192,96,.25); }
+
 /* поле ключа OpenRouter */
 .key-row { width: 100%; }
 #or-key {
