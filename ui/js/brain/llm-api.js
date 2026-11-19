@@ -4,15 +4,31 @@
 // (запросы уходят xAI — решай сам, это плата приватностью, не деньгами).
 
 const PROVIDERS = {
+    // полевой тест с машины в РФ (2026): 403 = блок Cloudflare, 401 = жив, ждёт ключ
+    glm: {
+        url: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+        model: 'glm-4-flash',          // бесплатный постоянно, не пробник
+        hint: 'GLM (Zhipu BigModel) — без VPN',
+    },
+    qwen: {
+        url: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+        model: 'qwen-plus',            // 1 млн токенов на модель, 90 дней
+        hint: 'Qwen (Alibaba, Сингапур) — без VPN',
+    },
+    deepseek: {
+        url: 'https://api.deepseek.com/chat/completions',
+        model: 'deepseek-chat',        // API платный, копейки; чат бесплатный
+        hint: 'DeepSeek — без VPN, пополнение от $1',
+    },
     grok: {
         url: 'https://api.x.ai/v1/chat/completions',
         model: 'grok-3-mini',
-        hint: 'Grok (xAI)',
+        hint: 'Grok (xAI) — из РФ 403, нужен VPN',
     },
     openrouter: {
         url: 'https://openrouter.ai/api/v1/chat/completions',
         model: 'meta-llama/llama-3.2-3b-instruct:free',
-        hint: 'OpenRouter (через VPN для РФ)',
+        hint: 'OpenRouter — из РФ 403, нужен VPN',
     },
 };
 
@@ -27,7 +43,7 @@ const PERSONA = [
 
 function cfg() {
     let provider = 'grok';
-    if (typeof localStorage !== 'undefined') provider = localStorage.getItem('ap.cloud_provider') || 'grok';
+    if (typeof localStorage !== 'undefined') provider = localStorage.getItem('ap.cloud_provider') || 'glm';
     const known = PROVIDERS[provider];
     let url = known ? known.url : (localStorage.getItem('ap.cloud_url') || '');
     let model = known ? known.model : 'gpt-3.5-turbo';

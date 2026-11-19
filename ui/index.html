@@ -59,8 +59,11 @@
                         class="rhvoice-hint" hidden>RHVoice не найден — скачать живые бесплатные голоса ↗</button>
                 <label class="key-row" id="cloud-row" hidden>Поставщик облака:
                     <select id="cloud-provider">
-                        <option value="grok">Grok (xAI)</option>
-                        <option value="openrouter">OpenRouter</option>
+                        <option value="glm">GLM-4 Flash (Zhipu, без VPN)</option>
+                        <option value="qwen">Qwen (Alibaba, без VPN)</option>
+                        <option value="deepseek">DeepSeek (без VPN, платный)</option>
+                        <option value="grok">Grok (нужен VPN)</option>
+                        <option value="openrouter">OpenRouter (нужен VPN)</option>
                         <option value="custom">Свой URL</option>
                     </select>
                 </label>
@@ -71,7 +74,7 @@
                     <input id="cloud-model" type="text" placeholder="grok-3-mini">
                 </label>
                 <label class="key-row" id="cloud-key-row" hidden>Ключ облака:
-                    <input id="cloud-key" type="password" placeholder="xai-… / sk-or-…">
+                    <input id="cloud-key" type="password" placeholder="ключ xai-… / sk-…">
                     <button id="cloud-save" title="сохранить ключ">✓</button>
                     <button id="cloud-ping" title="проверить ключ">⚡</button>
                 </label>
