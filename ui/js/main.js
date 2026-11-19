@@ -66,7 +66,9 @@ async function handleUser(input) {
     playEmotion('think', 900);
     status.textContent = 'думает…';
     const brain = getBrain(brainSel.value);
-    const { text, emotion } = await brain.respond(clean, history);
+    // ВАЖНО: input уже в history — отдаём историю без него,
+    // иначе вопрос уходит в модель дважды и она эхом возвращает его же
+    const { text, emotion } = await brain.respond(clean, history.slice(0, -1));
     history.push({ who: 'agent', text });
     status.textContent = '';
     await agentSay(text, emotion);

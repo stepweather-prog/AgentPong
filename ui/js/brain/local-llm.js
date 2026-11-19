@@ -178,8 +178,18 @@ export const localBrain = {
                 { role: 'user', content: String(input).slice(0, 1200) },
             ];
             const out = await engine.chat.completions.create({ messages, max_tokens: 200, temperature: 0.8 });
-            const text = out?.choices?.[0]?.message?.content?.trim();
+            // Qwen3 любит думать вслух тегом <think> — вырезаем рассуждения
+            let raw = out?.choices?.[0]?.message?.content?.trim() || '';
+            const text = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
             if (!text) throw new Error('пустой ответ');
+            // страховка от эха: модель повторила ваш же текст — не позоримся, отыгрываем
+            const norm = (s) => String(s).replace(/[\s.!?,,]+/g, '').toLowerCase();
+            if (norm(text) === norm(input) || norm(text) === norm(history[history.length - 1]?.text || '')) {
+                return {
+                    text: 'Эхо-камера, между прочим. Твои слова возвращаются без озвучки... бесплатно. Переформулируй — попробую ещё раз.',
+                    emotion: 'doubt',
+                };
+            }
             return { text, emotion: guessEmotion(text) };
         } catch (e) {
             return {
