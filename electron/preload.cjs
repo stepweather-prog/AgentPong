@@ -9,5 +9,6 @@ contextBridge.exposeInMainWorld('apWidget', {
     minimize: () => ipcRenderer.send('ap:minimize'),
     quit: () => ipcRenderer.send('ap:quit'),
     dragStart: () => ipcRenderer.send('ap:drag-start'),
-    tts: (text) => ipcRenderer.invoke('tts:ps', text),
+    tts: (text, voiceName) => ipcRenderer.invoke('tts:ps', { text: text, voiceName: voiceName || null }),
+    voices: () => ipcRenderer.invoke('tts:voices'),
 });

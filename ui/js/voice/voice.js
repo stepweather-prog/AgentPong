@@ -49,21 +49,36 @@ export const voice = {
 
     async status(engine, onProgress) {
         if (engine === 'piper') return piperStatus(onProgress);
-        if (engine === 'win') {
-            if (!window.apWidget) return 'Системный голос — только в виджете';
-            return 'Системный Windows-голос: Ирина/Павел (из ОС)';
-        }
+        if (engine === 'win') return winStatus();
         if (engine === 'webspeech') return 'Браузерный голос: ' + (ruVoiceName() || 'русских голосов ОС не найдено');
         return 'Голос выключен';
     },
 };
+
+async function winStatus() {
+    if (!window.apWidget) return 'Системный голос — только в виджете';
+    let res;
+    try { res = await window.apWidget.voices(); } catch (e) { return 'Системный TTS недоступен: ' + e; }
+    if (!res || !res.ok) return 'Системный TTS не поднялся: ' + (res && res.why ? res.why : '?');
+    if (!res.voices.length) {
+        return 'В Windows выключены голоса: Параметры → Время и язык → Речь → Добавить голоса';
+    }
+    const ru = res.voices.filter((v) => /^ru/i.test(v.culture));
+    if (!ru.length) {
+        return 'Голосов: ' + res.voices.length + ', но русских нет (только ' +
+            res.voices.map(v => v.name).join(', ') +
+            '). Поставь русский: Параметры → Время и язык → Речь → Добавить голоса → русский';
+    }
+    return 'Голосов: ' + res.voices.length + ', русский: ' + ru.map(v => v.name).join(', ');
+}
 
 async function speakOne(text, eng) {
     try {
         if (eng === 'piper') return await piperSpeak(text);
         if (eng === 'win') {
             if (!window.apWidget || !window.apWidget.tts) return { ok: false, why: 'не виджет' };
-            const ok = await window.apWidget.tts(text);
+            const voiceName = localStorage.getItem('ap.win_voice') || null;
+            const ok = await window.apWidget.tts(text, voiceName);
             return ok ? { ok: true } : { ok: false, why: 'powershell вернул ошибку' };
         }
         if (eng === 'webspeech') return webspeechSpeak(text);

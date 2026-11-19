@@ -161,6 +161,38 @@ llmModelSel.addEventListener('change', () => {
     if (brainSel.value === 'web-llm') warmLocal(); // поднять выбранную
 });
 
+// системный голос Windows (только в виджете): список из ОС + выбор
+const winVoiceSel = $('win-voice');
+if (window.apWidget) {
+    window.apWidget.voices().then((res) => {
+        if (!res || !res.ok || !res.voices || !res.voices.length) {
+            if (res && !res.ok) status.textContent = 'SAPI не поднялся: ' + (res.why || '?');
+            return;
+        }
+        $('win-voices-row').hidden = false;
+        const saved = localStorage.getItem('ap.win_voice');
+        for (const v of res.voices) {
+            const o = document.createElement('option');
+            o.value = v.name;
+            o.textContent = v.name + ' [' + v.culture + ']';
+            winVoiceSel.appendChild(o);
+        }
+        if (saved && res.voices.some((v) => v.name === saved)) {
+            winVoiceSel.value = saved;
+        } else {
+            const ru = res.voices.find((v) => /^ru/i.test(v.culture));
+            if (ru) {
+                winVoiceSel.value = ru.name;
+                localStorage.setItem('ap.win_voice', ru.name);
+            }
+        }
+    });
+    winVoiceSel.addEventListener('change', () => {
+        localStorage.setItem('ap.win_voice', winVoiceSel.value);
+        refreshStatus();
+    });
+}
+
 // список голосов ОС мог ещё не прогрузиться
 if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = refreshStatus;
 

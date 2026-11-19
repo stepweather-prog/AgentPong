@@ -26,7 +26,14 @@ export function setModel(id) {
 let enginePromise = null;
 
 function statusTo(onStatus) {
-    return (progress) => onStatus && onStatus(progress.text || '');
+    return (report) => {
+        if (!onStatus) return;
+        let s = (report && report.text ? report.text : '').trim();
+        if (report && typeof report.progress === 'number') {
+            s += ' — ' + Math.round(report.progress * 100) + '%';
+        }
+        onStatus(s);
+    };
 }
 
 async function getEngine(onStatus) {

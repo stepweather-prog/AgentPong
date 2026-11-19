@@ -89,8 +89,8 @@ body {
     z-index: 2;
     display: flex;
     gap: 6px;
-    padding: 0 40px 16px;
-    margin-top: -14px;
+    padding: 0 40px 34px;   /* высоко от нижнего края газеты */
+    margin-top: -18px;
 }
 
 /* твоя газета — реплика поменьше */
@@ -207,6 +207,7 @@ body {
 }
 
 #engine-status { font-size: 11px; opacity: .85; max-width: 300px; }
+#switches .hint { font-size: 11px; opacity: .6; max-width: 300px; font-style: italic; color: #d8d2c0; }
 
 /* поле ключа OpenRouter */
 .key-row { width: 100%; }
@@ -272,6 +273,6 @@ body.widget #widget-bar { display: flex; }
 body.widget #talk { width: 96vw; }
 body.widget .dialog { min-height: 235px; }
 body.widget .dialog-text { min-height: 105px; padding: 56px 38px 8px; font-size: 15px; }
-body.widget #input-row { padding: 0 30px 14px; }
+body.widget #input-row { padding: 0 30px 28px; margin-top: -12px; }
 body.widget #log { max-height: 14vh; }
 body.widget #switches { font-size: 12px; gap: 8px; padding: 10px 12px; }

@@ -110,22 +110,52 @@ ipcMain.on('ap:drag-start', () => { if (win) win.webContents.send('ap:drag'); })
 /* ---------- системный TTS Windows (0 МБ, оффлайн, надёжно) ---------- */
 const { spawn } = require('child_process');
 
-ipcMain.handle('tts:ps', (event, text) => {
+function runPs(script) {
+    const args = ['-NoProfile', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')];
     return new Promise((resolve) => {
-        const textB64 = Buffer.from(String(text || ''), 'utf8').toString('base64');
-        const script =
-            '$s = New-Object System.Speech.Synthesis.SpeechSynthesizer; ' +
-            "$v = $s.GetInstalledVoices() | Where-Object { $_.VoiceInfo.Culture.Name -like 'ru*' } | Select-Object -First 1; " +
-            'if ($v) { $s.SelectVoice($v.VoiceInfo.Name) }; ' +
-            "$t = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('" + textB64 + "')); " +
-            '$s.Speak($t)';
-        const args = ['-NoProfile', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')];
         const p = spawn('powershell.exe', args, { windowsHide: true });
+        let out = '';
+        p.stdout.on('data', (d) => { out += d; });
         let done = false;
-        const finish = (ok, code) => { if (!done) { done = true; resolve(ok); } };
-        p.on('error', () => finish(false));
-        p.on('exit', (code) => finish(code === 0, code));
+        const finish = (ok) => { if (!done) { done = true; resolve(ok); } };
+        p.on('error', () => finish(null));
+        p.on('exit', (code) => finish(code === 0 ? out : null));
     });
+}
+
+// список установленных голосов SAPI (для настроек виджета)
+ipcMain.handle('tts:voices', async () => {
+    const script =
+        'Add-Type -AssemblyName System.Speech; ' +
+        '$s = New-Object System.Speech.Synthesis.SpeechSynthesizer; ' +
+        "$s.GetInstalledVoices() | ForEach-Object { $_.VoiceInfo.Name + '|' + $_.VoiceInfo.Culture.Name }";
+    const out = await runPs(script);
+    if (out === null) return { ok: false, voices: [], why: 'PowerShell System.Speech не поднялся' };
+    const voices = String(out).split(/\r?\n/).map(l => l.trim()).filter(Boolean).map((l) => {
+        const i = l.lastIndexOf('|');
+        return { name: l.slice(0, i), culture: l.slice(i + 1) };
+    });
+    return { ok: true, voices };
+});
+
+// payload: { text, voiceName? } или просто строка (старый контракт)
+ipcMain.handle('tts:ps', (event, payload) => {
+    const { text, voiceName } = (payload && typeof payload === 'object' && !Buffer.isBuffer(payload))
+        ? payload : { text: payload, voiceName: null };
+    const textB64 = Buffer.from(String(text || ''), 'utf8').toString('base64');
+    const voiceB64 = Buffer.from(String(voiceName || ''), 'utf8').toString('base64');
+    const script =
+        'Add-Type -AssemblyName System.Speech; ' +
+        '$s = New-Object System.Speech.Synthesis.SpeechSynthesizer; ' +
+        "$all = $s.GetInstalledVoices(); " +
+        "$pref = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('" + voiceB64 + "')); " +
+        "$v = @($all | Where-Object { $_.VoiceInfo.Name -eq $pref })[0]; " +
+        "if (-not $v) { $v = @($all | Where-Object { $_.VoiceInfo.Culture.Name -like 'ru*' })[0]; } " +
+        'if (-not $v) { $v = @($all)[0]; } ' +
+        'if ($v) { $s.SelectVoice($v.VoiceInfo.Name); } ' +
+        "$t = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('" + textB64 + "')); " +
+        '$s.Speak($t)';
+    return runPs(script).then((out) => out !== null);
 });
 
 /* ---------- старт ---------- */
