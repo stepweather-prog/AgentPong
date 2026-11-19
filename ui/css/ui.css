@@ -300,26 +300,13 @@ body {
     #talk  { width: 92vw; }
 }
 
-/* ---------- виджет-режим (Electron: прозрачное окно без рамки) ---------- */
-body.widget { background: transparent; }
+/* ---------- виджет-режим (Electron: обычное окно, тянет за системную шапку) --- */
 body.widget #stage { padding: 0; gap: 0; flex-direction: column; align-items: center; justify-content: flex-start; }
-body.widget #agent { height: 38vh; }
-body.widget #agent-slot {
-    position: relative;
-    -webkit-app-region: drag;      /* тащим за агента */
-    cursor: grab;
-    margin-top: 4px;
-}
-body.widget #agent-slot:active { cursor: grabbing; }
-/* пока тащим — замираем: анимация дыхания и смена поз убирают лаг перетаскивания */
-body.dragging #agent { animation-play-state: paused; }
-body.dragging #agent-slot { cursor: grabbing; }
-body.widget #agent-caption { -webkit-app-region: no-drag; }
+body.widget #agent { height: 30vh; }
 body.widget #widget-bar {
     position: absolute;
     top: 2px; right: 6px;
     display: flex; gap: 4px;
-    -webkit-app-region: no-drag;
     z-index: 10;
 }
 #widget-bar { display: none; }
@@ -334,8 +321,7 @@ body.widget #widget-bar { display: flex; }
     cursor: pointer;
 }
 body.widget #talk { width: 96vw; }
-/* газеты целиком, окно 640px по умолчанию: агент 30vh + две газеты — всё влезает */
-body.widget #agent { height: 30vh; }
+/* газеты целиком, окно 680px по умолчанию: агент 30vh + две газеты — всё влезает */
 body.widget .dialog { min-height: 178px; }
 body.widget .dialog-text { min-height: 76px; padding: 50px 34px 6px; font-size: 14px; }
 body.widget #input-row { padding: 0 30px 24px; margin-top: -8px; }

@@ -41,14 +41,13 @@ function startServer() {
 
 /* ---------- окно ---------- */
 function createWindow(url) {
+    // обычное окно: системная шапка, фон как в браузере — тащится нативно и гладко
     win = new BrowserWindow({
         width: 420,
         height: 680,
-        frame: false,
-        transparent: true,
+        backgroundColor: '#141b24',
         alwaysOnTop: true,
-        skipTaskbar: true,          // живём в трее, а не в панели задач
-        resizable: true,
+        autoHideMenuBar: true,
         icon: path.join(ROOT, 'Asset', 'agent', 'icon.png'),
         webPreferences: {
             preload: path.join(__dirname, 'preload.cjs'),

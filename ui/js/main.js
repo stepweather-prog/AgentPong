@@ -102,11 +102,14 @@ $('gear').addEventListener('click', () => {
 });
 
 // выход из настроек: крестик, клик мимо окна, Esc
+// (клик по ⚙ не считаем «мимо» — иначе обработчик мимо закрывает окно сразу после открытия)
 function closeSwitches() { $('switches').hidden = true; }
 $('switches-close').addEventListener('click', closeSwitches);
 $('switches').addEventListener('click', (e) => e.stopPropagation());
 document.addEventListener('click', (e) => {
-    if (!$('switches').hidden && !$('switches').contains(e.target)) closeSwitches();
+    if ($('switches').hidden || $('switches').contains(e.target)) return;
+    if (e.target === $('gear') || $('gear').contains(e.target)) return;
+    closeSwitches();
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSwitches(); });
 $('log-toggle').addEventListener('click', () => {
@@ -285,15 +288,7 @@ if (window.apWidget) {
 if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = refreshStatus;
 
 /* ---------- старт ---------- */
-initWidget(agentSay);           // виджет-режим: трей, перетаскивание, ворчание
-// перетаскивание: замираем (анимации стоп, курсор-лапка) — иначе трухает с лагом
-agent.addEventListener('mousedown', () => {
-    if (!window.apWidget) return;
-    document.body.classList.add('dragging');
-    window.apWidget.dragStart();
-});
-document.addEventListener('mouseup', () => document.body.classList.remove('dragging'));
-window.addEventListener('blur', () => document.body.classList.remove('dragging'));
+initWidget(agentSay);           // виджет-режим: трей и ворчание
 agent.addEventListener('dblclick', () => {  // ладошка: скажет что-нибудь сам
     const idle = getBrain(brainSel.value);
     idle.respond('', []).then(({ text, emotion }) => agentSay(text, emotion));
