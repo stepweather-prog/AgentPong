@@ -18,7 +18,7 @@ export function setModel(id) {
     if (!LOCAL_MODELS.some(m => m.id === id)) return false;
     if (id === modelId) return true;
     modelId = id;
-    localStorage.setItem('ap.llm_model', id);
+    if (typeof localStorage !== 'undefined') localStorage.setItem('ap.llm_model', id);
     enginePromise = null;   // следующая сессия поднимет выбранную
     return true;
 }
