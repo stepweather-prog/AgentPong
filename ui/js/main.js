@@ -225,7 +225,9 @@ if (window.apWidget) {
             const rb = $('rhvoice');
             rb.hidden = false;
             rb.onclick = () => {
-                const url = 'https://github.com/RHVoice/RHVoice/releases';
+                // nvda.ru — понятная русская страница с SAPI5-комплектами RHVoice
+                // (github-релизы проекта сейчас содержат только исходники и Android/NVDA)
+                const url = 'https://nvda.ru/sintezator-rhvoice';
                 if (window.apWidget && window.apWidget.openExternal) window.apWidget.openExternal(url);
                 else window.open(url, '_blank');
             };
