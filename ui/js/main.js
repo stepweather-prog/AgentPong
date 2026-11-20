@@ -1,5 +1,5 @@
 // AgentPong — сцена агента
-import { srcOf, EMOTIONS, IDLE } from './emotions.js';
+import { srcOf, framesOf, IDLE, EXCITED, preloadAll } from './emotions.js';
 import { getBrain, brainList } from './brain/brain.js';
 import { cloudStatusText, pingCloud } from './brain/llm-api.js';
 import { LOCAL_MODELS, setModel, currentModel, checkModel, hwBudgetMB, initModels, f16State } from './brain/local-llm.js';
@@ -13,30 +13,39 @@ const voiceSel = $('voice-engine'), brainSel = $('brain-engine'), status = $('en
 
 const history = []; // {who:'user'|'agent', text} — только в памяти, как и положено сеансу
 
-/* ---------- idle-дыхание (переливы поз) ---------- */
-let idleIdx = 0, idleTimer = null, emotionUntil = 0;
+/* ---------- покадровый плеер (4-кадровые листы) ---------- */
+let animTimer = null, emotionUntil = 0;
 
-function startIdle() {
-    idleTimer = setInterval(() => {
-        if (document.body.classList.contains('dragging')) return;  // тащим — не меняем позу
-        if (performance.now() < emotionUntil) return; // эмоция ещё играет
-        idleIdx = (idleIdx + 1) % IDLE.length;
-        if (agent.dataset.emotion) {   // эмоция кончилась — тихо вернуть idle
-            agent.dataset.emotion = '';
-            agent.classList.remove('excited');
-        }
-        agent.src = IDLE[idleIdx];
-    }, 3600);
+function startSeq(frames, ms) {                 // петля из кадров настроения
+    clearInterval(animTimer);
+    let i = 0;
+    agent.src = frames[i];
+    animTimer = setInterval(() => {
+        if (document.body.classList.contains('dragging')) return;  // тащим — кадр не меняем
+        i = (i + 1) % frames.length;
+        agent.src = frames[i];
+    }, ms);
+}
+
+function startIdle() {                          // медленная беззаботная петля
+    agent.dataset.emotion = '';
+    agent.classList.remove('excited');
+    startSeq(IDLE, 520);
 }
 
 function playEmotion(key, holdMs = 2600) {
-    const src = srcOf(key);
-    if (!src) return;
-    agent.src = src;
+    const frames = framesOf(key);
+    if (!frames) return;
     agent.dataset.emotion = key;
-    agent.classList.toggle('excited', ['laugh', 'mocking', 'gotcha', 'eureka', 'accuse'].includes(key));
+    agent.classList.toggle('excited', EXCITED.has(key));
     emotionUntil = performance.now() + holdMs;
+    startSeq(frames, 150);                      // живая мимика: цикл ~0.6 с
 }
+
+// эмоция отыграла — тихо вернуть idle-петлю
+setInterval(() => {
+    if (agent.dataset.emotion && performance.now() >= emotionUntil) startIdle();
+}, 400);
 
 /* ---------- реплики ---------- */
 function logLine(who, text) {
@@ -474,4 +483,5 @@ agent.addEventListener('dblclick', () => {  // ладошка: скажет чт
 });
 
 startIdle();
+preloadAll();   // кадры в кэш — петли не мигают при первом переключении
 refreshStatus();

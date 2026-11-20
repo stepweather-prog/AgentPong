@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@mintplex-labs/piper-tts-web": "^1.0.5",
-    "@mlc-ai/web-llm": "^0.2.89"
+    "@mlc-ai/web-llm": "^0.2.89",
+    "jimp": "^0.22.12"
   }
 }

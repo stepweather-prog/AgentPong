@@ -1,43 +1,72 @@
-// AgentPong — карта эмоций агента, источник: Asset/ASSETS.md
-// Тег -> путь к кадру. Кадры одного листа выровнены, годятся для смены.
+// AgentPong — эмоции агента по новым спрайт-листам 2x2 (Asset/agent/frames/)
+// Каждое настроение — 4 кадра 512x512, нарезка: слева-направо, сверху-вниз.
+// Эмоция = короткая петля из 4 кадров; idle — медленная петля happy.
 
-const F = (sheet, frame, tag) =>
-    (tag === 'EMPTY')
-        ? null
-        : `../Asset/frames/sheet-${sheet}/sheet-${sheet}-frame-${frame}-${tag}.webp`;
+const FR = (mood, n) => `../Asset/agent/frames/${mood}-${n}.png`;
+const seq = (mood) => [1, 2, 3, 4].map((n) => FR(mood, n));
 
+// настроение -> последовательность кадров (файлы mood-1..4.png)
 export const EMOTIONS = {
-    // события -> кадр (sheet, frame, tag)
-    greet:     F('04', '04', 'greet'),        // поздоровался
-    farewell:  F('02', '08', 'walk-off'),     // уходит нехотя
-    thanks:    F('02', '04', 'laugh-open'),   // поблагодарили
-    laugh:     F('04', '05', 'rofl-point'),
-    mocking:   F('03', '04', 'mocking'),
-    gotcha:    F('02', '06', 'gotcha'),       // сарказм, подловил
-    doubt:     F('04', '09', 'doubt'),
-    idk:       F('01', '01', 'idk'),
-    think:     F('04', '03', 'hard-think'),
-    eureka:    F('04', '06', 'eureka'),
-    sorry:     F('04', '01', 'sad'),
-    stern:     F('03', '03', 'stern'),
-    annoyed:   F('01', '03', 'annoyed'),
-    accuse:    F('03', '05', 'accuse'),
-    shrug:     F('01', '07', 'shrug'),
-    scheming:  F('03', '06', 'scheming'),
-    sneaky:    F('03', '08', 'sneaky'),
-    waiting:   F('03', '09', 'waiting'),
-    check:     F('01', '02', 'check'),
-    proud:     F('02', '03', 'serious'),
-    neutral:   null,                          // idle-позы agent/
+    // события -> настроение-лист
+    greet:    seq('happy'),     // поздоровались
+    farewell: seq('angry'),     // уходит нехотя
+    thanks:   seq('happy'),
+    laugh:    seq('laugh'),
+    mocking:  seq('mocking'),
+    gotcha:   seq('mocking'),   // сарказм, подловил
+    doubt:    seq('think'),
+    idk:      seq('think'),
+    think:    seq('think'),
+    eureka:   seq('eureka'),
+    shock:    seq('shock'),     // изумление
+    sorry:    seq('bored'),
+    stern:    seq('angry'),
+    annoyed:  seq('angry'),
+    accuse:   seq('mocking'),
+    shrug:    seq('happy'),
+    scheming: seq('scheming'),
+    sneaky:   seq('scheming'),
+    waiting:  seq('busy'),
+    check:    seq('busy'),
+    busy:     seq('busy'),
+    search:   seq('search'),    // поиск/сканирование
+    proud:    seq('happy'),
+    bored:    seq('bored'),
+    angry:    seq('angry'),
+    happy:    seq('happy'),
+    // старые теги ворчания виджета — алиасы на новые настроения
+    'eyes-shut':     seq('bored'),
+    strut:           seq('angry'),
+    'outrage-point': seq('angry'),
+    neutral:  null,             // idle-петля IDLE
 };
 
-// idle-позы: база + подмигивания-переливы
-export const IDLE = [
-    '../Asset/agent/agent-01-idle.webp',
-    '../Asset/agent/agent-03-idle-near-2.webp',
-    '../Asset/agent/agent-05-idle-near-4.webp',
-];
+// idle: медленная беззаботная петля «стоит, руки в карманах»
+export const IDLE = seq('happy');
 
-export function srcOf(key) {
+// ключи, при которых агент подпрыгивает (css .excited)
+export const EXCITED = new Set(['laugh', 'mocking', 'gotcha', 'eureka', 'accuse']);
+
+export function framesOf(key) {
     return EMOTIONS[key] || null;
+}
+
+// совместимость: одиночный кадр (первый из последовательности)
+export function srcOf(key) {
+    const f = framesOf(key);
+    return f ? f[0] : null;
+}
+
+// предзагрузка всех кадров, чтобы петли не мигали при первой смене src
+let preloaded = false;
+export function preloadAll() {
+    if (preloaded) return;
+    preloaded = true;
+    for (const frames of Object.values(EMOTIONS)) {
+        if (!frames) continue;
+        for (const src of frames) {
+            const im = new Image();
+            im.src = src;
+        }
+    }
 }
