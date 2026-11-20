@@ -64,9 +64,9 @@ const HANDS = [
     { re: /громче|погромче|(прибав|увелич|повысь|поднажми|добавь)[а-яё]*\s*(звук|громкост)|(звук|громкость)[а-яё]*\s*(больше|выше|прибав|увелич|повыш|добав)/i, run: () => SY.volume('up', 10) },
     { re: /тише|потише|(убав|уменьш|снизь|пониж)[а-яё]*\s*(звук|громкост)|(звук|громкость)[а-яё]*\s*(меньше|ниже|убав|уменьш|сниж|пониж)/i, run: () => SY.volume('down', 10) },
     { re: /(выключ|отключ|заглуши|приглуши)[а-яё]*\s*(звук|громкост)|без\s+звука|мьют/i, run: () => SY.volume('mute') },
-    { re: /(запусти|открой)(те)?\s+браузер/i, run: () => SY.openApp('browser') },
-    { re: /(запусти|открой)(те)?\s+блокнот/i, run: () => SY.openApp('notepad') },
-    { re: /(запусти|открой)(те)?\s+калькулятор/i, run: () => SY.openApp('calc') },
+    { re: /(запусти|открой)(те)?\s+браузер/i, perm: 'launch', run: () => SY.openApp('browser') },
+    { re: /(запусти|открой)(те)?\s+блокнот/i, perm: 'launch', run: () => SY.openApp('notepad') },
+    { re: /(запусти|открой)(те)?\s+калькулятор/i, perm: 'launch', run: () => SY.openApp('calc') },
     { re: /что\s+у\s+нас\s+с\s+железом|сколько\s+памяти|какая\s+(видео)?карта|характеристик/i, run: async () => {
         const hw = SY.hw ? await SY.hw() : null;
         if (!hw) return 'Нахожусь в обычном браузере — туда моё железное чутьё не дотягивается.';
@@ -79,19 +79,83 @@ const HANDS = [
 // фразы похожи на команду про звук (слова есть), но парсер не понял — помогаем, а не издеваемся
 const SOUNDISH = /(звук|громкост)/i;
 
+// реплика руками: в память сеанса + озвучка (история рук тоже одноразовая)
+async function handSay(text, emotion = 'neutral') {
+    history.push({ who: 'agent', text });
+    await agentSay(text, emotion);
+}
+
+/* ---------- скилы и турникет разрешений ---------- */
+// Скил = действия этажа 3+ (нужен пропуск). Этажи 1-2 (звук, чтение железа) — свободный проход.
+// Три состояния на скил: 'ask' | 'always' | 'never'. Хранится только на машине.
+const SKILLS = {
+    launch: { title: 'Запуск программ из белого списка (браузер, блокнот, калькулятор)' },
+};
+
+function perms() {
+    try { return JSON.parse(localStorage.getItem('ap.perms') || '{}'); } catch (_) { return {}; }
+}
+function savePerm(id, v) {
+    const p = perms();
+    p[id] = v;
+    localStorage.setItem('ap.perms', JSON.stringify(p));
+}
+
+// спрашивалка: промис — «всегда/сейчас/нет»; в браузере без DOM-элементов просто нет
+let permPending = null;
+function askPerm(id) {
+    if (permPending) { permPending(null); }
+    const gate = $('perm-gate'), txt = $('perm-text');
+    txt.textContent = 'Скил: ' + SKILLS[id].title + '. Разрешить?';
+    gate.hidden = false;
+    return new Promise((resolve) => {
+        permPending = resolve;
+        const done = (v) => { gate.hidden = true; permPending = null; resolve(v); };
+        $('perm-always').onclick = () => done('always');
+        $('perm-once').onclick = () => done('once');
+        $('perm-never').onclick = () => done('never');
+    });
+}
+
+async function withPerm(id, run, happy, denied) {
+    let p = perms()[id] || 'ask';
+    if (p === 'never') { await handSay(denied, 'stern'); return; }
+    if (p === 'ask') {
+        const answer = await askPerm(id);
+        if (answer === 'always') { savePerm(id, 'always'); }
+        else if (answer === 'never') { savePerm(id, 'never'); await handSay(denied, 'stern'); return; }
+        else if (answer === null) { await handSay('Я спрашивал, а ты ушёл. Скупой платит дважды.', 'doubt'); return; }
+    }
+    await run();
+    await handSay(happy, 'eureka');
+}
+
+const GATE_REPLIES = {
+    happy: [
+        'Сделано. Халява, между прочим: ни одного облачного токена не потратил.',
+        'Есть. Руками шевелить — это бесплатно, в отличие от вашего интернета.',
+        'Готово. Внесено в бухгалтерию под графом «мелочь, не жалко».',
+        'Выполнено и зафиксировано: сессия одноразовая, история — тоже.',
+    ],
+    denied: [
+        'Сам ставил турникет «нет» — я не слуга, я экономист. Менять согласие только в настройках.',
+        'Пропуск ты мне выписал: «нет». Уважаю: байты целее. Переиграешь — скажи.',
+    ],
+};
+
 async function tryHands(input) {
     if (!SY) return null;
     for (const [idx, hand] of HANDS.entries()) {
         const m = input.match(hand.re);
         if (!m) continue;
-        try { await hand.run(); } catch (e) { /* отчёт ниже всё равно честный */ }
-        const snark = [
-            'Сделано. Халява, между прочим: ни одного облачного токена не потратил.',
-            'Есть. Руками шевелить — это бесплатно, в отличие от вашего интернета.',
-            'Готово. Внесено в бухгалтерию под графом «мелочь, не жалко».',
-            'Выполнено и зафиксировано: сессия одноразовая, история — тоже.',
-        ][idx % 4];
-        return { text: snark, emotion: 'eureka' };
+        const happy = GATE_REPLIES.happy[idx % 4];
+        if (hand.perm) {
+            withPerm(hand.perm, hand.run, happy, GATE_REPLIES.denied[idx % 2]);
+        } else {
+            try { await hand.run(); } catch (e) { /* отчёт ниже всё равно честный */ }
+            await handSay(happy, 'eureka');
+        }
+        return true;
     }
     // похоже на команду про звук, но ни один жест не узнал фразу — помогаем списком
     if (SOUNDISH.test(input)) {
@@ -115,11 +179,8 @@ async function handleUser(input) {
     playEmotion('think', 900);
     status.textContent = 'думает…';
     // сперва руки: команда выполняется локально, без мозга и сети
-    const hand = await tryHands(clean);
-    if (hand) {
-        history.push({ who: 'agent', text: hand.text });
+    if (await tryHands(clean)) {
         status.textContent = '';
-        await agentSay(hand.text, hand.emotion);
         return;
     }
     const brain = getBrain(brainSel.value);
@@ -237,6 +298,12 @@ $('cloud-save').addEventListener('click', () => {
 $('cloud-ping').addEventListener('click', async () => {
     cloudStatus.textContent = 'стучусь в облако…';
     cloudStatus.textContent = await pingCloud();
+});
+
+// сброс турникета: все скилы снова спрашивают
+$('perms-reset').addEventListener('click', () => {
+    localStorage.removeItem('ap.perms');
+    cloudStatus.textContent = 'разрешения скилов сброшены — спрошу заново при случае';
 });
 
 // выбор голоса/мозга запоминаем; в виджете — системный голос по умолчанию

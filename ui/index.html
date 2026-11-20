@@ -81,6 +81,7 @@
                 </label>
                 <span id="cloud-status" class="hint" hidden></span>
                 <span id="engine-status"></span>
+                <button id="perms-reset" class="key-row" title="все скилы снова спрашивают">Сбросить разрешения скилов</button>
             </div>
         </div>
 
@@ -99,6 +100,16 @@
         <!-- реплики прошлые — разматываются по клику -->
         <button id="log-toggle" title="прошлые реплики">свиток разговоров ▾</button>
         <div id="log" hidden></div>
+
+        <!-- турникет скилов: спросить / всегда / никогда -->
+        <div id="perm-gate" hidden>
+            <div id="perm-text"></div>
+            <div id="perm-btns">
+                <button id="perm-always" title="больше не спрашивать">всегда</button>
+                <button id="perm-once" title="только сейчас">сейчас</button>
+                <button id="perm-never" title="не разрешать">нет</button>
+            </div>
+        </div>
     </div>
 </div>
 
