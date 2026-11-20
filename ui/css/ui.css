@@ -33,7 +33,7 @@ body {
 
 #agent-frame {
     position: relative;          /* держатель двух слоёв кадра */
-    animation: breath 3.4s ease-in-out infinite;
+    animation: live 7s ease-in-out infinite;
 }
 
 #agent {
@@ -54,12 +54,15 @@ body {
     pointer-events: none;
 }
 
-@keyframes breath {
-    0%, 100% { transform: translateY(0) scale(1); }
-    50%      { transform: translateY(-6px) scale(1.006); }
+/* жизнь: дыхание + едва заметные наклоны, без смены картинок */
+@keyframes live {
+    0%, 100% { transform: translateY(0) scale(1) rotate(0deg); }
+    25%      { transform: translateY(-3px) scale(1.004) rotate(.4deg); }
+    50%      { transform: translateY(-7px) scale(1.007) rotate(0deg); }
+    75%      { transform: translateY(-3px) scale(1.004) rotate(-.4deg); }
 }
 
-#agent-frame.excited { animation-duration: 1.2s; }
+#agent-frame.excited { animation-duration: 2.2s; }
 
 #agent-caption {
     margin-top: 10px;

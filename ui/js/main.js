@@ -14,11 +14,11 @@ const voiceSel = $('voice-engine'), brainSel = $('brain-engine'), status = $('en
 
 const history = []; // {who:'user'|'agent', text} — только в памяти, как и положено сеансу
 
-/* ---------- плавный плеер: два слоя, кадры не мелькуют, а растворяются ---------- */
+/* ---------- плавный плеер: эмоция отыгрывается РАЗ и замирает; листает только хлопоты ---------- */
 let animTimer = null, emotionUntil = 0, animGen = 0;
 let front = agent, back = agentB;            // front — видимый слой, back — про запас
 
-function startSeq(frames, ms, fadeMs) {      // петля кадров настроения
+function seq(frames, { fade = 260, hold = 340, loop = false } = {}) {
     clearInterval(animTimer);
     const gen = ++animGen;                   // Interruptible: смена эмоции глушит незавершённые фейды
     let i = 0;
@@ -28,24 +28,41 @@ function startSeq(frames, ms, fadeMs) {      // петля кадров наст
     back.style.opacity = '0';
 
     animTimer = setInterval(() => {
-        if (document.body.classList.contains('dragging')) return;  // тащим — кадр не меняем
-        i = (i + 1) % frames.length;
+        if (document.body.classList.contains('dragging')) return;   // тащим — кадр не меняем
+        i++;
+        if (i >= frames.length) {            // лист дочитан
+            if (!loop) {                     // эмоция: застыть на последнем кадре, ничего не мельтешит
+                clearInterval(animTimer);
+                return;
+            }
+            i = 0;                           // хлопоты (занят/ищет) — листается медленно и плавно
+        }
         back.src = frames[i];                // следующий кадр — в задний слой
-        back.style.transition = `opacity ${fadeMs}ms ease`;
+        back.style.transition = `opacity ${fade}ms ease`;
         back.style.opacity = '1';            // ...и проявляем его
         setTimeout(() => {                   // проявился — меняем слои ролями
             if (gen !== animGen) return;
             [front, back] = [back, front];
             back.style.transition = 'none';
             back.style.opacity = '0';
-        }, fadeMs);
-    }, ms);
+        }, fade);
+    }, fade + hold);
 }
 
-function startIdle() {                          // медленная беззаботная петля
+function startIdle() {                       // одна поза + CSS-дыхание; никаких петель
+    clearInterval(animTimer);
+    const gen = ++animGen;
     agent.dataset.emotion = '';
     agentFrame.classList.remove('excited');
-    startSeq(IDLE, 850, 480);                   // 4 кадра за ~3.4 с — в такт дыханию
+    back.src = IDLE[0];                      // мягкий перелёт на idle-позу одним раствором
+    back.style.transition = 'opacity 420ms ease';
+    back.style.opacity = '1';
+    setTimeout(() => {
+        if (gen !== animGen) return;
+        [front, back] = [back, front];
+        back.style.transition = 'none';
+        back.style.opacity = '0';
+    }, 420);
 }
 
 function playEmotion(key, holdMs = 2600) {
@@ -54,7 +71,7 @@ function playEmotion(key, holdMs = 2600) {
     agent.dataset.emotion = key;
     agentFrame.classList.toggle('excited', EXCITED.has(key));
     emotionUntil = performance.now() + holdMs;
-    startSeq(frames, 420, 240);                 // живая мимика, но не стробоскоп
+    seq(frames, { fade: 260, hold: 340 });   // один проход: улыбочка/вздрог и замер лицом
 }
 
 // эмоция отыграла — тихо вернуть idle-петлю
