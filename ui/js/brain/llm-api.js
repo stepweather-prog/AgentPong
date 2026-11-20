@@ -97,8 +97,9 @@ export const llmBrain = {
                 body: JSON.stringify({
                     model,
                     messages,
-                    max_tokens: 300,
+                    max_tokens: 400,
                     temperature: 0.6,
+                    thinking: { type: 'disabled' },  // GLM: отвечать, а не философствовать
                 }),
             });
             if (resp.status === 401 || resp.status === 403) {
@@ -149,14 +150,27 @@ export async function pingCloud() {
         const resp = await fetch(url, {
             method: 'POST',
             headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model, messages: [{ role: 'user', content: '1+1=?' }], max_tokens: 30 }),
+            // GLM «думает» в reasoning_content: отключаем думание и даём запас токенов,
+            // иначе 30 токенов съедаются мыслями и content приходит пустым
+            body: JSON.stringify({
+                model,
+                messages: [{ role: 'user', content: 'Ответь одним словом: 1+1=?' }],
+                max_tokens: 256,
+                thinking: { type: 'disabled' },
+            }),
         });
         if (resp.status === 401 || resp.status === 403) return 'ключ отвергнут (' + resp.status + ')';
         if (resp.status === 429) return 'ключ жив, лимит исчерпан (429)';
         if (!resp.ok) return 'сервер ответил ' + resp.status;
         const data = await resp.json();
-        const t = data?.choices?.[0]?.message?.content?.trim();
-        return t ? 'живой: ' + t.slice(0, 60) : 'живой, но ответ пустой';
+        const msg = data?.choices?.[0]?.message || {};
+        const raw = String(msg.content || msg.reasoning_content || '');
+        const t = raw.replace(new RegExp("&lt;think&gt;[\\s\\S]*?&lt;/think&gt;", 'gi'), '').replace(new RegExp("<think>[\\s\\S]*?</think>", 'gi'), '').trim();
+        if (!t) {
+            const fin = data?.choices?.[0]?.finish_reason || '?';
+            return 'жив, но молчит (finish_reason: ' + fin + ')';
+        }
+        return 'живой: ' + t.slice(0, 60);
     } catch (e) {
         const m = e && e.message ? e.message : String(e);
         const hint = /failed to fetch|networkerror|load failed/i.test(m)
