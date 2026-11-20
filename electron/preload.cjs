@@ -15,4 +15,7 @@ contextBridge.exposeInMainWorld('apWidget', {
     openExternal: (url) => {
         if (/^https?:\/\//.test(String(url))) ipcRenderer.send('ap:open-external', url);
     },
+    // руки (этажи 1-3: белый список в main-процессе, модель их не расширяет)
+    volume: (dir, steps) => ipcRenderer.invoke('sys:volume', { dir, steps }),
+    openApp: (app) => ipcRenderer.invoke('sys:open', app),
 });

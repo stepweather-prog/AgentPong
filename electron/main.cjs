@@ -107,6 +107,43 @@ ipcMain.on('ap:quit', () => { quitting = true; app.quit(); });
 ipcMain.on('ap:drag-start', () => { if (win) win.webContents.send('ap:drag'); });
 ipcMain.on('ap:open-external', (e, url) => { if (/^https?:\/\//.test(String(url))) shell.openExternal(url); });
 
+/* ---------- руки Скряги: белый список жестов (этажи 1-3) ---------- */
+// Исполнитель — наш switch, не модель: GLM валидируется заранее в парсере.
+// Этаж 3 — только белый список приложений; файлов и сети тут нет в принципе.
+const HEAVY_HANDS = ['notepad', 'calc', 'browser'];   // и только эти
+
+ipcMain.handle('sys:open', (e, app) => {
+    if (!HEAVY_HANDS.includes(String(app))) return { ok: false, why: 'вне белого списка' };
+    try {
+        if (app === 'notepad') {
+            const p = spawn('notepad.exe', [], { detached: true, shell: false, windowsHide: false });
+            p.unref();
+        } else if (app === 'calc') {
+            const p = spawn('calc.exe', [], { detached: true, shell: false, windowsHide: false });
+            p.unref();
+        } else if (app === 'browser') {
+            shell.openExternal('https://www.google.com');
+        }
+        return { ok: true };
+    } catch (err) {
+        return { ok: false, why: String(err && err.message || err) };
+    }
+});
+
+ipcMain.handle('sys:volume', (e, payload) => {
+    // dir: 'up'|'down'|'mute'; одно нажатие VK_VOLUME = 2% громкости
+    const { dir, steps } = (typeof payload === 'object' && payload) || {};
+    const VK_MUTE = 0xAD, VK_DOWN = 0xAE, VK_UP = 0xAF;
+    if (!['up', 'down', 'mute'].includes(String(dir))) return { ok: false, why: 'нет такого жеста' };
+    const n = Math.min(Math.max(Number(steps) || 1, 1), 20);
+    const vk = dir === 'up' ? VK_UP : dir === 'down' ? VK_DOWN : VK_MUTE;
+    const KTY = 'using System;using System.Runtime.InteropServices;public class K{[DllImport("user32.dll")]public static extern void keybd_event(byte b,byte s,uint f,IntPtr e);}';
+    const press = '[K]::keybd_event(' + vk + ',0,1,[IntPtr]::Zero); [K]::keybd_event(' + vk + ',0,3,[IntPtr]::Zero);';
+    const script = "Add-Type -TypeDefinition '" + KTY + "'; "
+        + (dir === 'mute' ? press : new Array(n).fill(press).join(' '));
+    return runPs(script).then((out) => ({ ok: out !== null }));
+});
+
 /* ---------- системный TTS Windows (0 МБ, оффлайн, надёжно) ---------- */
 const { spawn } = require('child_process');
 

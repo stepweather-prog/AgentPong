@@ -55,6 +55,44 @@ async function agentSay(text, emotion = 'neutral') {
     await voice.speak(text, voiceSel.value);
 }
 
+/* ---------- руки: локальный парсер команд (этажи 1-3, offline, мгновенно) ---------- */
+// Команда ловится ДО мозга: звук/открытие/железо не зависят от облака и не стоят токенов.
+// Исполнение — только через apSys (белый список в main-процессе); модель рук не имеет.
+const SY = window.apSys;   // в браузере (не виджет) рук нет — уходит обычной репликой
+
+const HANDS = [
+    { re: /громче|прибав(ь|ить)\s+(звук|громкость)/i, run: () => SY.volume('up', 10) },
+    { re: /тише|потише|убав(ь|ить)\s+(звук|громкость)/i, run: () => SY.volume('down', 10) },
+    { re: /выключ(и|ите)\s+звук|без\s+звука|мьют/i, run: () => SY.volume('mute') },
+    { re: /(запусти|открой)(те)?\s+браузер/i, run: () => SY.openApp('browser') },
+    { re: /(запусти|открой)(те)?\s+блокнот/i, run: () => SY.openApp('notepad') },
+    { re: /(запусти|открой)(те)?\s+калькулятор/i, run: () => SY.openApp('calc') },
+    { re: /что\s+у\s+нас\s+с\s+железом|сколько\s+памяти|какая\s+(видео)?карта|характеристик/i, run: async () => {
+        const hw = SY.hw ? await SY.hw() : null;
+        if (!hw) return 'Нахожусь в обычном браузере — туда моё железное чутьё не дотягивается.';
+        return 'Глянем в нутро: ' + (hw.gpuName || 'видеокарта не опознана')
+            + ', VRAM около ' + hw.vramMB + ' МБ, ОЗУ свободно '
+            + hw.ramFreeMB + ' из ' + hw.ramTotalMB + ' МБ. Половину всё равно скуплю.';
+    } },
+];
+
+async function tryHands(input) {
+    if (!SY) return null;
+    for (const [idx, hand] of HANDS.entries()) {
+        const m = input.match(hand.re);
+        if (!m) continue;
+        try { await hand.run(); } catch (e) { /* отчёт ниже всё равно честный */ }
+        const snark = [
+            'Сделано. Халява, между прочим: ни одного облачного токена не потратил.',
+            'Есть. Руками шевелить — это бесплатно, в отличие от вашего интернета.',
+            'Готово. Внесено в бухгалтерию под графом «мелочь, не жалко».',
+            'Выполнено и зафиксировано: сессия одноразовая, история — тоже.',
+        ][idx % 4];
+        return { text: snark, emotion: 'eureka' };
+    }
+    return null;
+}
+
 /* ---------- обмен с мозгом ---------- */
 async function handleUser(input) {
     const clean = (input || '').trim();
@@ -66,6 +104,14 @@ async function handleUser(input) {
 
     playEmotion('think', 900);
     status.textContent = 'думает…';
+    // сперва руки: команда выполняется локально, без мозга и сети
+    const hand = await tryHands(clean);
+    if (hand) {
+        history.push({ who: 'agent', text: hand.text });
+        status.textContent = '';
+        await agentSay(hand.text, hand.emotion);
+        return;
+    }
     const brain = getBrain(brainSel.value);
     // ВАЖНО: input уже в history — отдаём историю без него,
     // иначе вопрос уходит в модель дважды и она эхом возвращает его же
