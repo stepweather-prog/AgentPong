@@ -1,4 +1,4 @@
-/* AgentPong — Глосс Скряга: сцена */
+/* AgentPong — сцена агента */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 /* никакого синего выделения при перетаскивании виджета */
@@ -301,6 +301,12 @@ body {
 }
 
 /* ---------- виджет-режим (Electron: обычное окно, тянет за системную шапку) --- */
+body.widget {
+    /* рабочее место Понга: офис с монитором, снизу-центр, размером в окно */
+    background: url('../Asset/agent/office.png') center bottom / cover no-repeat,
+                radial-gradient(circle at 30% 20%, #2e3b4e, #141b24 70%);
+}
+
 body.widget #stage { padding: 0; gap: 0; flex-direction: column; align-items: center; justify-content: flex-start; }
 body.widget #agent { height: 30vh; }
 body.widget #widget-bar {

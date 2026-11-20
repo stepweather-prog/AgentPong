@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title Глосс Скряга — виджет (Electron)
+title Агент Понг — виджет
 cd /d "D:\stepweather-prog\AgentPong"
 
 where npx >nul 2>nul

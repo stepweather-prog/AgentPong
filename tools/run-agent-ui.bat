@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title Глосс Скряга — AgentPong UI
+title Агент Понг — UI
 cd /d "D:\stepweather-prog\AgentPong"
 
 where node >nul 2>nul
@@ -11,7 +11,7 @@ if errorlevel 1 (
 )
 
 echo.
-echo  Запускаю Глосса Скрягу на http://localhost:8087/ui/
+echo  Запускаю Агента Понга на http://localhost:8087/ui/
 echo  (окно можно свернуть — сервер работает, пока оно открыто; закрытие = остановка)
 echo.
 start "" "http://localhost:8087/ui/"
