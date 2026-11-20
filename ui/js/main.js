@@ -1,4 +1,4 @@
-// AgentPong — Глосс Скряга: сцена
+// AgentPong — сцена агента
 import { srcOf, EMOTIONS, IDLE } from './emotions.js';
 import { getBrain, brainList } from './brain/brain.js';
 import { cloudStatusText, pingCloud } from './brain/llm-api.js';
@@ -42,7 +42,7 @@ function playEmotion(key, holdMs = 2600) {
 function logLine(who, text) {
     const div = document.createElement('div');
     div.className = who === 'user' ? 'u' : 'a';
-    div.innerHTML = `<span class="who">${who === 'user' ? 'Ты' : 'Скряга'}:</span> `;
+    div.innerHTML = `<span class="who">${who === 'user' ? 'Ты' : 'Понг'}:</span> `;
     div.appendChild(document.createTextNode(text));
     log.appendChild(div);
     log.scrollTop = log.scrollHeight;

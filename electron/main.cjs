@@ -1,4 +1,4 @@
-// AgentPong — Electron-виджет Глосса Скряги
+// AgentPong — Electron-виджет Агента Понга
 // Окно без рамки, прозрачное, поверх всех, живёт в трее.
 const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, shell } = require('electron');
 const http = require('http');
@@ -78,9 +78,9 @@ function createWindow(url) {
 function createTray() {
     const img = nativeImage.createFromPath(path.join(ROOT, 'Asset', 'agent', 'icon.png')).resize({ width: 32, height: 32 });
     tray = new Tray(img);
-    tray.setToolTip('Глосс Скряга — AgentPong');
+    tray.setToolTip('Агент Понг');
     tray.setContextMenu(Menu.buildFromTemplate([
-        { label: 'Показать Скрягу', click: () => showWin() },
+        { label: 'Показать Понга', click: () => showWin() },
         { label: 'Спрятать (пусть ворчит)', click: () => hideWin() },
         { type: 'separator' },
         { label: 'Поверх всех окон', type: 'checkbox', checked: true, click: (mi) => { if (win) { win.setAlwaysOnTop(mi.checked, 'screen-saver'); } } },
@@ -107,7 +107,7 @@ ipcMain.on('ap:quit', () => { quitting = true; app.quit(); });
 ipcMain.on('ap:drag-start', () => { if (win) win.webContents.send('ap:drag'); });
 ipcMain.on('ap:open-external', (e, url) => { if (/^https?:\/\//.test(String(url))) shell.openExternal(url); });
 
-/* ---------- руки Скряги: белый список жестов (этажи 1-3) ---------- */
+/* ---------- руки агента: белый список жестов (этажи 1-3) ---------- */
 // Исполнитель — наш switch, не модель: GLM валидируется заранее в парсере.
 // Этаж 3 — только белый список приложений; файлов и сети тут нет в принципе.
 const HEAVY_HANDS = ['notepad', 'calc', 'browser'];   // и только эти
@@ -231,7 +231,7 @@ ipcMain.handle('hw:info', async () => {
 
 /* ---------- CORS-мост для облачных мозгов ---------- */
 // Китайские API (api.z.ai, open.bigmodel.cn, dashscope…) не отдают заголовок
-// Access-Control-Allow-Origin — Chromium рубит fetch у Скряги ещё до сети
+// Access-Control-Allow-Origin — Chromium рубит fetch у агента ещё до сети
 // («не достучался»). Curl этот заголовок не проверяет, потому curl работает.
 // Мост: доклеиваем разрешение на перелёте, webSecurity у окна НЕ трогаем.
 const CORS_HOSTS = /(z\.ai|bigmodel\.cn|dashscope\.aliyuncs|deepseek\.com|api\.x\.ai|openrouter\.ai)$/;
