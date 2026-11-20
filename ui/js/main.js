@@ -204,7 +204,7 @@ $('voice-test').addEventListener('click', async () => {
 
 // мозг тоже запоминаем: без этого каждый старт снова rules — и модель «не работает»
 brainSel.value = localStorage.getItem('ap.brain') || 'rules';
-cloudProvider.value = localStorage.getItem('ap.cloud_provider') || 'glm';
+cloudProvider.value = localStorage.getItem('ap.cloud_provider') || 'zai';
 const savedCloudModel = localStorage.getItem('ap.cloud_model');
 if (savedCloudModel) cloudModel.value = savedCloudModel;
 const savedCloudUrl = localStorage.getItem('ap.cloud_url');

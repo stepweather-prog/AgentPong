@@ -100,7 +100,14 @@ api.deepseek.com 401 (жив, ждёт ключ), dashscope.aliyuncs.com 404 (ж
 - Qwen (Alibaba Model Studio, Сингапур) — 1 000 000 токенов на каждую модель
   отдельно, 90 дней, без карты; OAuth Qwen Chat — 2000 вызовов/день.
 - DeepSeek — API копеечный (от $1 пополнение), чат бесплатный, из RF напрямую.
-Порядок в UI: GLM-Flash → Qwen → DeepSeek → Grok/OpenRouter (VPN).
+Порядок в UI: GLM (Z.ai) → Qwen → DeepSeek → BigModel → Grok/OpenRouter (VPN).
+
+Облако_бигмодель_ловушка_+86: регистрация open.bigmodel.cn требует SMS на
+телефон, селектор стран всегда +86 — из РФ пройти нельзя. Обход: та же
+компания Zhipu держит международную платформу **z.ai** — email-регистрация,
+открывается без VPN, GLM-4.5-Flash / 4.7-Flash бесплатны постоянно
+(api.z.ai, OpenAI-совместимо). Qwen OAuth 2000 запросов/день — закрыт
+Alibaba в апреле 2026, не использовать.
 
 Облако_Grok_архив: халява через opt-in на шаринг данных (console.x.ai) —
 закрыто для РФ (403), оставлено как дальний трамвайный путь.

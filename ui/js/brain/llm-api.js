@@ -5,10 +5,15 @@
 
 const PROVIDERS = {
     // полевой тест с машины в РФ (2026): 403 = блок Cloudflare, 401 = жив, ждёт ключ
+    zai: {
+        url: 'https://api.z.ai/api/paas/v4/chat/completions',
+        model: 'glm-4.5-flash',        // бесплатный постоянно; регистрация по email, без +86
+        hint: 'GLM (Z.ai) — без VPN, email-регистрация',
+    },
     glm: {
         url: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
-        model: 'glm-4-flash',          // бесплатный постоянно, не пробник
-        hint: 'GLM (Zhipu BigModel) — без VPN',
+        model: 'glm-4-flash',          // бесплатный постоянно, но регистрация требует +86
+        hint: 'GLM (Zhipu BigModel) — из РФ упирается в +86',
     },
     qwen: {
         url: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
@@ -43,7 +48,7 @@ const PERSONA = [
 
 function cfg() {
     let provider = 'grok';
-    if (typeof localStorage !== 'undefined') provider = localStorage.getItem('ap.cloud_provider') || 'glm';
+    if (typeof localStorage !== 'undefined') provider = localStorage.getItem('ap.cloud_provider') || 'zai';
     const known = PROVIDERS[provider];
     let url = known ? known.url : (localStorage.getItem('ap.cloud_url') || '');
     let model = known ? known.model : 'gpt-3.5-turbo';
