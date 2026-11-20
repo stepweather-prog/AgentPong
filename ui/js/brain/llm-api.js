@@ -8,22 +8,22 @@ const PROVIDERS = {
     zai: {
         url: 'https://api.z.ai/api/paas/v4/chat/completions',
         model: 'glm-4.5-flash',        // бесплатный постоянно; регистрация по email, без +86
-        hint: 'GLM (Z.ai) — без VPN, email-регистрация',
-    },
-    glm: {
-        url: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
-        model: 'glm-4-flash',          // бесплатный постоянно, но регистрация требует +86
-        hint: 'GLM (Zhipu BigModel) — из РФ упирается в +86',
+        hint: 'GLM (Z.ai) — в виджете-EXE да, из PWA-браузера нет (CORS)',
     },
     qwen: {
         url: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
         model: 'qwen-plus',            // 1 млн токенов на модель, 90 дней
-        hint: 'Qwen (Alibaba, Сингапур) — без VPN',
+        hint: 'Qwen — бесплатная квота, CORS открыт: работает и в PWA',
     },
     deepseek: {
         url: 'https://api.deepseek.com/chat/completions',
         model: 'deepseek-chat',        // API платный, копейки; чат бесплатный
-        hint: 'DeepSeek — без VPN, пополнение от $1',
+        hint: 'DeepSeek — CORS открыт: работает и в PWA; платно, от $1',
+    },
+    glm: {
+        url: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+        model: 'glm-4-flash',          // бесплатный постоянно, но регистрация требует +86
+        hint: 'GLM (Zhipu) — из РФ упирается в +86; в PWA ещё и CORS',
     },
     grok: {
         url: 'https://api.x.ai/v1/chat/completions',
@@ -123,8 +123,13 @@ export const llmBrain = {
             return { text, emotion: guessEmotion(text) };
         } catch (e) {
             const m = e && e.message ? e.message : String(e);
-            const hint = /failed to fetch|networkerror|load failed/i.test(m)
-                ? ' (сеть/CORS — VPN тут ни при чём, раз curl ходит)'
+            const corsy = /failed to fetch|networkerror|load failed/i.test(m);
+            // в установленной PWA z.ai не отвечает браузеру — подсказать провайдера с открытым CORS
+            const standalone = typeof matchMedia === 'function' && matchMedia('(display-mode: standalone)').matches;
+            const hint = corsy
+                ? (standalone && (() => cfg().provider)() === 'zai'
+                    ? ' — в PWA у Z.ai CORS закрыт: возьми Qwen (бесплатно) или запусти Понга ярлыком-виджетом, там свой мост'
+                    : ' (сеть/CORS — VPN тут ни при чём, раз curl ходит)')
                 : '';
             return {
                 text: 'Облако не отозвалось: ' + m + hint + '. Правила-скряга всегда при мне — надёжнее облака моё нутро.',
