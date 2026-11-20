@@ -7,39 +7,54 @@ import { voice } from './voice/voice.js';
 import { initWidget } from './widget.js';
 
 const $ = (id) => document.getElementById(id);
-const agent = $('agent'), agentText = $('agent-text'), log = $('log');
+const agent = $('agent'), agentB = $('agent-b'), agentFrame = $('agent-frame');
+const agentText = $('agent-text'), log = $('log');
 const say = $('say'), send = $('send'), mic = $('mic');
 const voiceSel = $('voice-engine'), brainSel = $('brain-engine'), status = $('engine-status');
 
 const history = []; // {who:'user'|'agent', text} — только в памяти, как и положено сеансу
 
-/* ---------- покадровый плеер (4-кадровые листы) ---------- */
-let animTimer = null, emotionUntil = 0;
+/* ---------- плавный плеер: два слоя, кадры не мелькуют, а растворяются ---------- */
+let animTimer = null, emotionUntil = 0, animGen = 0;
+let front = agent, back = agentB;            // front — видимый слой, back — про запас
 
-function startSeq(frames, ms) {                 // петля из кадров настроения
+function startSeq(frames, ms, fadeMs) {      // петля кадров настроения
     clearInterval(animTimer);
+    const gen = ++animGen;                   // Interruptible: смена эмоции глушит незавершённые фейды
     let i = 0;
-    agent.src = frames[i];
+
+    front.src = frames[0];                   // первый кадр — сразу, без фейда
+    back.style.transition = 'none';
+    back.style.opacity = '0';
+
     animTimer = setInterval(() => {
         if (document.body.classList.contains('dragging')) return;  // тащим — кадр не меняем
         i = (i + 1) % frames.length;
-        agent.src = frames[i];
+        back.src = frames[i];                // следующий кадр — в задний слой
+        back.style.transition = `opacity ${fadeMs}ms ease`;
+        back.style.opacity = '1';            // ...и проявляем его
+        setTimeout(() => {                   // проявился — меняем слои ролями
+            if (gen !== animGen) return;
+            [front, back] = [back, front];
+            back.style.transition = 'none';
+            back.style.opacity = '0';
+        }, fadeMs);
     }, ms);
 }
 
 function startIdle() {                          // медленная беззаботная петля
     agent.dataset.emotion = '';
-    agent.classList.remove('excited');
-    startSeq(IDLE, 520);
+    agentFrame.classList.remove('excited');
+    startSeq(IDLE, 850, 480);                   // 4 кадра за ~3.4 с — в такт дыханию
 }
 
 function playEmotion(key, holdMs = 2600) {
     const frames = framesOf(key);
     if (!frames) return;
     agent.dataset.emotion = key;
-    agent.classList.toggle('excited', EXCITED.has(key));
+    agentFrame.classList.toggle('excited', EXCITED.has(key));
     emotionUntil = performance.now() + holdMs;
-    startSeq(frames, 150);                      // живая мимика: цикл ~0.6 с
+    startSeq(frames, 420, 240);                 // живая мимика, но не стробоскоп
 }
 
 // эмоция отыграла — тихо вернуть idle-петлю
