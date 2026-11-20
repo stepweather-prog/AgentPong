@@ -1,5 +1,5 @@
 // AgentPong — service worker: офлайн-кэш для установки как PWA
-const VERSION = 'agentpong-v1';
+const VERSION = 'agentpong-v2';   // v2: анимация-кроссфейд + SiliconFlow/Qwen-intl
 const CORE = [
     './',
     './index.html',
