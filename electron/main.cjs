@@ -204,7 +204,13 @@ app.whenReady().then(() => {
     const filter = { urls: ['https://*/*'] };
     wr.onHeadersReceived(filter, (details, cb) => {
         if (CORS_HOSTS.test(new URL(details.url).hostname)) {
-            const h = details.responseHeaders || {};
+            // z.ai шлёт свой ACAO (значением 'null') — второй сверху값 ломает
+            // Chromium ('multiple values'), поэтому старые сносим все, ставим один
+            const drop = ['access-control-allow-origin', 'access-control-allow-headers', 'access-control-allow-methods'];
+            const h = {};
+            for (const [k, v] of Object.entries(details.responseHeaders || {})) {
+                if (!drop.includes(k.toLowerCase())) h[k] = v;
+            }
             h['Access-Control-Allow-Origin'] = ['*'];
             h['Access-Control-Allow-Headers'] = ['*'];
             h['Access-Control-Allow-Methods'] = ['GET, POST, OPTIONS'];
