@@ -163,6 +163,7 @@ export async function pingCloud() {
     const key = localStorage.getItem('ap.cloud_key');
     if (!key) return 'ключ не введён';
     const { url, model } = cfg();
+    const where = '[' + new URL(url).host + ' / ' + model + '] ';
     try {
         const resp = await fetch(url, {
             method: 'POST',
@@ -176,18 +177,22 @@ export async function pingCloud() {
                 thinking: { type: 'disabled' },
             }),
         });
-        if (resp.status === 401 || resp.status === 403) return 'ключ отвергнут (' + resp.status + ')';
-        if (resp.status === 429) return 'ключ жив, лимит исчерпан (429)';
-        if (!resp.ok) return 'сервер ответил ' + resp.status;
+        if (resp.status === 401 || resp.status === 403) {
+            let extra = '';
+            try { const j = await resp.json(); extra = ' — ' + (j.message || j.code || '?'); } catch (_) {}
+            return where + 'ключ отвергнут (' + resp.status + ')' + extra;
+        }
+        if (resp.status === 429) return where + 'ключ жив, лимит исчерпан (429)';
+        if (!resp.ok) return where + 'сервер ответил ' + resp.status;
         const data = await resp.json();
         const msg = data?.choices?.[0]?.message || {};
         const raw = String(msg.content || msg.reasoning_content || '');
         const t = raw.replace(new RegExp("&lt;think&gt;[\\s\\S]*?&lt;/think&gt;", 'gi'), '').replace(new RegExp("<think>[\\s\\S]*?</think>", 'gi'), '').trim();
         if (!t) {
             const fin = data?.choices?.[0]?.finish_reason || '?';
-            return 'жив, но молчит (finish_reason: ' + fin + ')';
+            return where + 'жив, но молчит (finish_reason: ' + fin + ')';
         }
-        return 'живой: ' + t.slice(0, 60);
+        return where + 'живой: ' + t.slice(0, 60);
     } catch (e) {
         const m = e && e.message ? e.message : String(e);
         const hint = /failed to fetch|networkerror|load failed/i.test(m)
