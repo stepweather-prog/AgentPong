@@ -15,6 +15,11 @@ const PROVIDERS = {
         model: 'qwen-plus',            // 1 млн токенов на модель, 90 дней
         hint: 'Qwen — бесплатная квота, CORS открыт: работает и в PWA',
     },
+    qwen_intl: {
+        url: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions',
+        model: 'qwen-plus',            // бесплатная квота новым аккаунтам Model Studio
+        hint: 'Qwen междунар. — email-регистрация без +86, CORS открыт, и в PWA',
+    },
     deepseek: {
         url: 'https://api.deepseek.com/chat/completions',
         model: 'deepseek-chat',        // API платный, копейки; чат бесплатный
