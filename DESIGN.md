@@ -102,6 +102,12 @@ api.deepseek.com 401 (жив, ждёт ключ), dashscope.aliyuncs.com 404 (ж
 - DeepSeek — API копеечный (от $1 пополнение), чат бесплатный, из RF напрямую.
 Порядок в UI: GLM (Z.ai) → Qwen → DeepSeek → BigModel → Grok/OpenRouter (VPN).
 
+Облако_CORS-мост: z.ai/bigmodel/dashscope не отдают Access-Control-Allow-Origin
+— Chromium рубит fetch («не достучался») до сети, curl работает. Лечится
+webRequest.onHeadersReceived в electron/main.cjs — доклейка разрешения,
+webSecurity у окна не выключен. VPN не виноват: подсказка ошибок это честно
+декодирует (Failed to fetch ≠ блокировка).
+
 Облако_бигмодель_ловушка_+86: регистрация open.bigmodel.cn требует SMS на
 телефон, селектор стран всегда +86 — из РФ пройти нельзя. Обход: та же
 компания Zhipu держит международную платформу **z.ai** — email-регистрация,

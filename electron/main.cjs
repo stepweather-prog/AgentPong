@@ -192,6 +192,28 @@ ipcMain.handle('hw:info', async () => {
     };
 });
 
+/* ---------- CORS-мост для облачных мозгов ---------- */
+// Китайские API (api.z.ai, open.bigmodel.cn, dashscope…) не отдают заголовок
+// Access-Control-Allow-Origin — Chromium рубит fetch у Скряги ещё до сети
+// («не достучался»). Curl этот заголовок не проверяет, потому curl работает.
+// Мост: доклеиваем разрешение на перелёте, webSecurity у окна НЕ трогаем.
+const CORS_HOSTS = /(z\.ai|bigmodel\.cn|dashscope\.aliyuncs|deepseek\.com|api\.x\.ai|openrouter\.ai)$/;
+app.whenReady().then(() => {
+    const { session } = require('electron');
+    const wr = (session.defaultSession || session).webRequest;
+    const filter = { urls: ['https://*/*'] };
+    wr.onHeadersReceived(filter, (details, cb) => {
+        if (CORS_HOSTS.test(new URL(details.url).hostname)) {
+            const h = details.responseHeaders || {};
+            h['Access-Control-Allow-Origin'] = ['*'];
+            h['Access-Control-Allow-Headers'] = ['*'];
+            h['Access-Control-Allow-Methods'] = ['GET, POST, OPTIONS'];
+            details.responseHeaders = h;
+        }
+        cb({ responseHeaders: details.responseHeaders });
+    });
+});
+
 /* ---------- старт ---------- */
 // разрешаем Dawn-фичу shader-f16 там, где карта умеет, но браузер по умолчанию
 // держит её за флагом (иначе q4f16-модели падают с 'requires shader-f16')

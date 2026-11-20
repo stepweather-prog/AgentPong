@@ -119,8 +119,12 @@ export const llmBrain = {
             }
             return { text, emotion: guessEmotion(text) };
         } catch (e) {
+            const m = e && e.message ? e.message : String(e);
+            const hint = /failed to fetch|networkerror|load failed/i.test(m)
+                ? ' (сеть/CORS — VPN тут ни при чём, раз curl ходит)'
+                : '';
             return {
-                text: 'Облако не отозвалось: ' + (e && e.message ? e.message : e) + '. Правила-скряга всегда при мне — надёжнее облака моё нутро.',
+                text: 'Облако не отозвалось: ' + m + hint + '. Правила-скряга всегда при мне — надёжнее облака моё нутро.',
                 emotion: 'doubt',
             };
         }
@@ -154,6 +158,9 @@ export async function pingCloud() {
         const t = data?.choices?.[0]?.message?.content?.trim();
         return t ? 'живой: ' + t.slice(0, 60) : 'живой, но ответ пустой';
     } catch (e) {
-        return 'не достучался: ' + (e && e.message ? e.message : e) + ' (для РФ — VPN)';
+        const m = e && e.message ? e.message : String(e);
+        const hint = /failed to fetch|networkerror|load failed/i.test(m)
+            ? 'нет связи (сеть/VPN)' : m;
+        return 'не достучался: ' + hint + ' — если curl из консоли ходит, это CORS и мы уже чиним';
     }
 }
