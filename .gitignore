@@ -1,2 +1,11 @@
+# секреты и локальные зависимости
 firebase-config.js
 node_modules/
+
+# сборки (electron-builder)
+dist/
+release/
+
+# локальные мелочи
+.env
+*.log

@@ -4,15 +4,44 @@
   "description": "AgentPong — агент на бесплатных мощностях",
   "main": "electron/main.cjs",
   "scripts": {
-    "widget": "electron ."
+    "widget": "electron .",
+    "icons": "node tools/make-pwa-icons.cjs",
+    "dist": "electron-builder --win"
   },
   "license": "MIT",
   "devDependencies": {
-    "electron": "^45.4.1"
+    "electron": "^45.4.1",
+    "electron-builder": "^26.0.12",
+    "jimp": "^0.22.12"
   },
   "dependencies": {
     "@mintplex-labs/piper-tts-web": "^1.0.5",
-    "@mlc-ai/web-llm": "^0.2.89",
-    "jimp": "^0.22.12"
+    "@mlc-ai/web-llm": "^0.2.89"
+  },
+  "build": {
+    "appId": "io.github.agentpong",
+    "productName": "AgentPong",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**",
+      "ui/**",
+      "Asset/**",
+      "package.json"
+    ],
+    "win": {
+      "icon": "Asset/agent/icon.ico",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Агент Понг"
+    }
   }
 }

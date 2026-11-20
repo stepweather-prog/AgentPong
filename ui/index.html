@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Агент Понг</title>
 <link rel="icon" href="../Asset/agent/icon.png">
+<link rel="apple-touch-icon" href="../Asset/icons/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#141b24">
 <link rel="stylesheet" href="css/ui.css">
 </head>
 <body>
@@ -114,5 +117,11 @@
 </div>
 
 <script type="module" src="js/main.js"></script>
+<script>
+    // PWA: регистрация service worker
+    if ('serviceWorker' in navigator) {
+        addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+    }
+</script>
 </body>
 </html>

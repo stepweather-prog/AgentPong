@@ -1,6 +1,6 @@
 // Симуляция двух пиров поверх пропатченного crypto-worker.js (v6.4)
 const fs = require('fs');
-const src = fs.readFileSync('D:/stepweather-prog/ROBINHOOD-P2P/crypto-worker.js', 'utf8');
+const src = fs.readFileSync(require.resolve('./crypto-worker.js'), 'utf8');
 const factory = new Function('self', src + '\n;return {generateKeyPair,deriveSecret,x3dhSend,x3dhReceive,packBlob,unpackBlob,advanceRecvRatchet,dhRatchetStep,dhRatchetReceive,sign,verify};');
 const W = factory({ onmessage: function(){} });
 

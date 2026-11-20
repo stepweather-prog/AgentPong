@@ -14,6 +14,7 @@ const MIME = {
     '.webp': 'image/webp',
     '.png': 'image/png',
     '.json': 'application/json',
+    '.webmanifest': 'application/manifest+json',
     '.md': 'text/plain; charset=utf-8',
 };
 
