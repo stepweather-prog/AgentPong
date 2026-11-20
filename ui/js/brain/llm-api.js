@@ -25,6 +25,11 @@ const PROVIDERS = {
         model: 'deepseek-chat',        // API платный, копейки; чат бесплатный
         hint: 'DeepSeek — CORS открыт: работает и в PWA; платно, от $1',
     },
+    siliconflow: {
+        url: 'https://api.siliconflow.com/v1/chat/completions',
+        model: 'Qwen/Qwen2.5-7B-Instruct',   // бесплатные тарифы моделей помечены Free
+        hint: 'SiliconFlow — регистрация по Google/GitHub, бесплатный уровень, CORS открыт',
+    },
     glm: {
         url: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
         model: 'glm-4-flash',          // бесплатный постоянно, но регистрация требует +86
